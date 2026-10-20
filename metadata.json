@@ -1,0 +1,8 @@
+{
+  "name": "Aventura 4x4",
+  "description": "Jogo de corrida e física off-road com subidas íngremes, ajuste de suspensão, oficina de upgrades e efeitos sonoros.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

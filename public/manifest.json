@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "Hill Climb Pro: Física & Upgrades",
+  "short_name": "HillClimbPro",
+  "description": "Jogo de corrida e física off-road com subidas íngremes, carros customizáveis e efeitos sonoros.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "theme_color": "#0b0f19",
+  "background_color": "#0b0f19",
+  "categories": ["games", "racing", "arcade"],
+  "icons": [
+    {
+      "src": "./assets/aistudio/Car_52e95eef.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/aistudio/Preview_4d11da81.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

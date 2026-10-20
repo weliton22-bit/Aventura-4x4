@@ -1,0 +1,13 @@
+{
+  "appId": "com.hillclimbpro.game",
+  "appName": "Hill Climb Pro",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0b0f19",
+    "allowMixedContent": true
+  }
+}
