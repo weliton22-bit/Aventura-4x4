@@ -4,6 +4,7 @@ import { Upgrades, VehicleId, StageId, VehicleUpgrades } from '../types/game';
 import { VEHICLES } from '../config/vehicles';
 import { STAGES, STAGE_LIST } from '../config/stages';
 import { soundManager } from '../audio/soundManager';
+import { getAssetUrl } from '../physics/assetLoader';
 
 interface GarageModalProps {
   isOpen: boolean;
@@ -204,7 +205,7 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                     {/* Imagem de Fundo / Miniatura do Cenário */}
                     <div className="h-28 rounded-xl overflow-hidden relative mb-3 bg-slate-950/80 border border-slate-800">
                       <img
-                        src={stage.thumbnail}
+                        src={getAssetUrl(stage.thumbnail)}
                         alt={stage.name}
                         className={`w-full h-full object-cover transition-transform duration-300 ${
                           !isUnlocked ? 'filter grayscale brightness-50' : 'hover:scale-105'
@@ -318,14 +319,14 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                     {/* Visualização de Sprite Real do Veículo */}
                     <div className="h-32 flex items-center justify-center relative w-full mb-3 bg-slate-950/50 rounded-xl p-2 border border-slate-800/70">
                       <img
-                        src={v.bodyImage}
+                        src={getAssetUrl(v.bodyImage)}
                         alt={v.name}
                         className={`max-h-24 max-w-[88%] object-contain drop-shadow-md ${
                           !isUnlocked ? 'filter grayscale brightness-50' : ''
                         }`}
                       />
                       <img
-                        src={v.headImage}
+                        src={getAssetUrl(v.headImage)}
                         alt={v.driverName}
                         className={`absolute w-10 h-10 object-contain top-2 left-[28%] ${
                           !isUnlocked ? 'filter grayscale brightness-50' : ''

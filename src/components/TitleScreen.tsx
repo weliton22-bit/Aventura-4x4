@@ -4,6 +4,7 @@ import { Upgrades, VehicleId, StageId } from '../types/game';
 import { VEHICLES } from '../config/vehicles';
 import { STAGES } from '../config/stages';
 import { soundManager } from '../audio/soundManager';
+import { getAssetUrl } from '../physics/assetLoader';
 
 interface TitleScreenProps {
   bestDistance: number;
@@ -80,7 +81,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-950 border border-slate-700 shrink-0">
               <img
-                src={currentStage.thumbnail}
+                src={getAssetUrl(currentStage.thumbnail)}
                 alt={currentStage.name}
                 className="w-full h-full object-cover"
               />
@@ -135,12 +136,12 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
                 {/* Imagem do carro */}
                 <div className="h-12 sm:h-14 flex items-center justify-center relative w-full mb-1">
                   <img
-                    src={v.bodyImage}
+                    src={getAssetUrl(v.bodyImage)}
                     alt={v.name}
                     className="max-h-10 sm:max-h-11 max-w-[90%] object-contain drop-shadow"
                   />
                   <img
-                    src={v.headImage}
+                    src={getAssetUrl(v.headImage)}
                     alt={v.driverName}
                     className="absolute w-5 h-5 sm:w-6 sm:h-6 object-contain top-0 left-[28%]"
                   />

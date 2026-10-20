@@ -10,29 +10,29 @@ import { getImage } from './assetLoader';
 // Sprites de Decoração por Bioma
 const BIOME_DECORATIONS: Record<string, { src: string; width: number; height: number; offsetY?: number }[]> = {
   GREEN_HILLS: [
-    { src: '/assets/aistudio/tree_1aaf2cb3.png', width: 65, height: 85 },
-    { src: '/assets/aistudio/treeSmall_green1_2224591d.png', width: 45, height: 62 },
-    { src: '/assets/aistudio/bush1_e14d775d.png', width: 44, height: 26 },
-    { src: '/assets/aistudio/bush2_35c22084.png', width: 46, height: 28 }
+    { src: './assets/aistudio/tree_1aaf2cb3.png', width: 65, height: 85 },
+    { src: './assets/aistudio/treeSmall_green1_2224591d.png', width: 45, height: 62 },
+    { src: './assets/aistudio/bush1_e14d775d.png', width: 44, height: 26 },
+    { src: './assets/aistudio/bush2_35c22084.png', width: 46, height: 28 }
   ],
   PINE_FOREST: [
-    { src: '/assets/aistudio/treePine_a7314ced.png', width: 55, height: 95 },
-    { src: '/assets/aistudio/treePineSnow_c7a6593f.png', width: 55, height: 95 },
-    { src: '/assets/aistudio/fence_74a4fd03.png', width: 48, height: 32 }
+    { src: './assets/aistudio/treePine_a7314ced.png', width: 55, height: 95 },
+    { src: './assets/aistudio/treePineSnow_c7a6593f.png', width: 55, height: 95 },
+    { src: './assets/aistudio/fence_74a4fd03.png', width: 48, height: 32 }
   ],
   AUTUMN_VALLEY: [
-    { src: '/assets/aistudio/treeOrange_d0c1bf45.png', width: 68, height: 90 },
-    { src: '/assets/aistudio/treePineOrange_22e1170b.png', width: 55, height: 95 },
-    { src: '/assets/aistudio/bushOrange1_23288293.png', width: 44, height: 26 },
-    { src: '/assets/aistudio/bushOrange2_1e372f9d.png', width: 48, height: 28 }
+    { src: './assets/aistudio/treeOrange_d0c1bf45.png', width: 68, height: 90 },
+    { src: './assets/aistudio/treePineOrange_22e1170b.png', width: 55, height: 95 },
+    { src: './assets/aistudio/bushOrange1_23288293.png', width: 44, height: 26 },
+    { src: './assets/aistudio/bushOrange2_1e372f9d.png', width: 48, height: 28 }
   ],
   DESERT_PYRAMIDS: [
-    { src: '/assets/aistudio/pyramid_3a3061b2.png', width: 140, height: 110, offsetY: 12 },
-    { src: '/assets/aistudio/pyramidMayan_2e35b70d.png', width: 130, height: 100, offsetY: 10 },
-    { src: '/assets/aistudio/cactus1_43a58b9f.png', width: 34, height: 60 },
-    { src: '/assets/aistudio/cactus2_3d81fa30.png', width: 38, height: 65 },
-    { src: '/assets/aistudio/cactus3_628b26ea.png', width: 32, height: 55 },
-    { src: '/assets/aistudio/treePalm_879b25be.png', width: 62, height: 95 }
+    { src: './assets/aistudio/pyramid_3a3061b2.png', width: 140, height: 110, offsetY: 12 },
+    { src: './assets/aistudio/pyramidMayan_2e35b70d.png', width: 130, height: 100, offsetY: 10 },
+    { src: './assets/aistudio/cactus1_43a58b9f.png', width: 34, height: 60 },
+    { src: './assets/aistudio/cactus2_3d81fa30.png', width: 38, height: 65 },
+    { src: './assets/aistudio/cactus3_628b26ea.png', width: 32, height: 55 },
+    { src: './assets/aistudio/treePalm_879b25be.png', width: 62, height: 95 }
   ]
 };
 
@@ -62,7 +62,7 @@ export function renderWorld(
   ctx.fillRect(0, 0, width, height);
 
   // 2. Sol Dourado
-  const sunImg = getImage('/assets/aistudio/sun_81a02dcd.png');
+  const sunImg = getImage('./assets/aistudio/sun_81a02dcd.png');
   const sunX = width * 0.82;
   const sunY = 55;
   if (sunImg) {
@@ -76,9 +76,9 @@ export function renderWorld(
 
   // 3. Nuvens de Paralaxe Flutuantes
   const cloudSprites = [
-    '/assets/aistudio/cloud1_6b2120c1.png',
-    '/assets/aistudio/cloud2_cdb2c2e1.png',
-    '/assets/aistudio/cloud3_3482086e.png'
+    './assets/aistudio/cloud1_6b2120c1.png',
+    './assets/aistudio/cloud2_cdb2c2e1.png',
+    './assets/aistudio/cloud3_3482086e.png'
   ];
   for (let c = 0; c < 5; c++) {
     const cloudImg = getImage(cloudSprites[c % cloudSprites.length]);
@@ -98,8 +98,8 @@ export function renderWorld(
   // 4. Camada 1 de Montanhas distantes (Paralaxe Lento)
   const farMountainImg = getImage(
     biome.id === 'DESERT_PYRAMIDS'
-      ? '/assets/aistudio/mountainB_e970ee01.png'
-      : (biome.id === 'PINE_FOREST' ? '/assets/aistudio/mountainA_9721f091.png' : '/assets/aistudio/mountains_33e78798.png')
+      ? './assets/aistudio/mountainB_e970ee01.png'
+      : (biome.id === 'PINE_FOREST' ? './assets/aistudio/mountainA_9721f091.png' : './assets/aistudio/mountains_33e78798.png')
   );
 
   if (farMountainImg) {
@@ -128,8 +128,8 @@ export function renderWorld(
   // 5. Camada 2 de Colinas intermediárias
   const nearHillsImg = getImage(
     biome.id === 'DESERT_PYRAMIDS'
-      ? '/assets/aistudio/hillsLarge_25777502.png'
-      : (biome.id === 'PINE_FOREST' ? '/assets/aistudio/mountainB_e970ee01.png' : '/assets/aistudio/hills_3ab7cec6.png')
+      ? './assets/aistudio/hillsLarge_25777502.png'
+      : (biome.id === 'PINE_FOREST' ? './assets/aistudio/mountainB_e970ee01.png' : './assets/aistudio/hills_3ab7cec6.png')
   );
 
   if (nearHillsImg) {

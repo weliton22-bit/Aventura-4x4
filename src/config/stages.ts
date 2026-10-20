@@ -8,7 +8,7 @@ export const STAGES: Record<StageId, StageConfig> = {
     subtitle: 'Cenário Inicial Clássico',
     price: 0, // Desbloqueado por padrão
     icon: '🌱',
-    thumbnail: '/assets/aistudio/backgroundColorGrass_cef70dcc.png',
+    thumbnail: './assets/aistudio/backgroundColorGrass_cef70dcc.png',
     description: 'Montanhas suaves com grama verde vibrante, árvores frondosas, arbustos e céu limpo. Excelente para acelerar e juntar moedas!',
     roughnessMultiplier: 1.0,
     frictionMultiplier: 1.0,
@@ -21,7 +21,7 @@ export const STAGES: Record<StageId, StageConfig> = {
     subtitle: 'Pinheiros & Cordilheiras',
     price: 150, // 150 moedas conforme pedido
     icon: '🌲',
-    thumbnail: '/assets/aistudio/backgroundColorForest_469a60c0.png',
+    thumbnail: './assets/aistudio/backgroundColorForest_469a60c0.png',
     description: 'Altos pinheiros pontiagudos e montanhas imponentes. Relevo mais ondulado que exige bom amortecimento e controle.',
     roughnessMultiplier: 1.15,
     frictionMultiplier: 1.02,
@@ -34,7 +34,7 @@ export const STAGES: Record<StageId, StageConfig> = {
     subtitle: 'Colinas Douradas & Folhagem',
     price: 300, // 300 moedas conforme pedido
     icon: '🍂',
-    thumbnail: '/assets/aistudio/backgroundColorFall_b4df338e.png',
+    thumbnail: './assets/aistudio/backgroundColorFall_b4df338e.png',
     description: 'Atmosfera acolhedora com árvores douradas e terreno terracota. Rampas mais longas e saltos acrobáticos eletrizantes!',
     roughnessMultiplier: 1.25,
     frictionMultiplier: 0.98,
@@ -47,7 +47,7 @@ export const STAGES: Record<StageId, StageConfig> = {
     subtitle: 'Dunas Ancestrais & Monumentos',
     price: 600, // 600 moedas conforme pedido
     icon: '🏜️',
-    thumbnail: '/assets/aistudio/backgroundColorDesert_0a63e5e3.png',
+    thumbnail: './assets/aistudio/backgroundColorDesert_0a63e5e3.png',
     description: 'Grandes Pirâmides históricas, templos antigos, cactos gigantes e dunas douradas escaldantes! Desafio épico de pilotagem.',
     roughnessMultiplier: 1.35,
     frictionMultiplier: 0.94,
