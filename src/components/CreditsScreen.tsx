@@ -7,7 +7,7 @@ interface CreditsScreenProps {
 
 export const CreditsScreen: React.FC<CreditsScreenProps> = ({ onBackToMenu }) => {
   return (
-    <div className="fixed inset-0 z-40 flex flex-col justify-between p-4 sm:p-6 md:p-8 bg-gradient-to-b from-slate-950 via-[#0a0f1d] to-slate-950 text-white select-none overflow-y-auto">
+    <div className="fixed inset-0 z-40 flex flex-col justify-between p-4 sm:p-6 md:p-8 bg-gradient-to-b from-slate-950 via-[#0a0f1d] to-slate-950 text-white select-none overflow-y-auto max-h-[100dvh] touch-pan-y">
       {/* Topo com botão de Voltar */}
       <div className="flex items-center justify-between max-w-4xl mx-auto w-full pb-2">
         <button

@@ -136,18 +136,18 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
   const dampingDesc = suspensionConfig.damping < 10 ? 'Oscilante' : suspensionConfig.damping > 19 ? 'Firme' : 'Equilibrado';
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col justify-between p-3 sm:p-5 md:p-6 bg-gradient-to-b from-slate-950 via-[#0a0f1d] to-slate-950 text-white select-none overflow-hidden">
+    <div className="garage-screen-container fixed inset-0 z-40 flex flex-col justify-between p-3 sm:p-5 md:p-6 bg-gradient-to-b from-slate-950 via-[#0a0f1d] to-slate-950 text-white select-none overflow-y-auto max-h-[100dvh] touch-pan-y">
       {/* ============================================================ */}
       {/* TOPO: RESUMO DO VEÍCULO SELECIONADO, SALDO E BOTÃO JOGAR     */}
       {/* ============================================================ */}
-      <div className="flex items-center justify-between max-w-5xl mx-auto w-full gap-2 sm:gap-4 shrink-0 pb-1">
+      <div className="garage-header-container flex items-center justify-between max-w-5xl mx-auto w-full gap-2 sm:gap-4 shrink-0 pb-1">
         {/* Veículo Ativo */}
         <div
           onClick={() => setIsCarSelectOpen(true)}
           className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-slate-900/80 hover:bg-slate-850 border border-slate-700/80 shadow-md cursor-pointer transition active:scale-95 group"
           title="Clique para trocar de veículo"
         >
-          <div className="w-10 h-10 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center justify-center p-1 shrink-0 overflow-hidden">
+          <div className="garage-header-car-thumb w-10 h-10 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center justify-center p-1 shrink-0 overflow-hidden">
             <img
               src={getAssetUrl(currentVehicleDef.bodyImage)}
               alt={currentVehicleDef.name}
@@ -203,8 +203,8 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
       {/* ============================================================ */}
       {/* CENTRO: 4 CARTAS RETANGULARES DE MELHORIAS LADO A LADO       */}
       {/* ============================================================ */}
-      <div className="max-w-5xl mx-auto w-full flex-1 flex items-center justify-center my-auto py-2">
-        <div className="grid grid-cols-4 gap-2 sm:gap-3.5 md:gap-4 w-full h-[330px] sm:h-[380px] md:h-[400px]">
+      <div className="max-w-5xl mx-auto w-full flex-1 flex items-center justify-center my-auto py-2 shrink-0">
+        <div className="garage-cards-grid grid grid-cols-4 gap-2 sm:gap-3.5 md:gap-4 w-full h-[330px] sm:h-[380px] md:h-[400px]">
           {UPGRADE_CARDS.map((item) => {
             const currentLevel = currentUpgrades[item.key] || 1;
             const isMax = currentLevel >= 10;
@@ -214,28 +214,28 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
             return (
               <div
                 key={item.key}
-                className="h-full flex flex-col justify-between p-2.5 sm:p-3.5 md:p-4 rounded-2xl sm:rounded-3xl bg-slate-900/75 backdrop-blur-md border border-slate-700/70 shadow-2xl hover:border-amber-400/60 hover:bg-slate-900/85 transition-all duration-200 group relative overflow-hidden"
+                className="garage-upgrade-card h-full flex flex-col justify-between p-2.5 sm:p-3.5 md:p-4 rounded-2xl sm:rounded-3xl bg-slate-900/75 backdrop-blur-md border border-slate-700/70 shadow-2xl hover:border-amber-400/60 hover:bg-slate-900/85 transition-all duration-200 group relative overflow-hidden"
               >
                 {/* -------------------------------------------------------- */}
                 {/* TOPO DA CARTA: PREÇO EM MOEDAS E NOME DA PEÇA            */}
                 {/* -------------------------------------------------------- */}
-                <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 pb-2 border-b border-slate-800/80 shrink-0">
+                <div className="garage-card-header w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 pb-2 border-b border-slate-800/80 shrink-0">
                   <div className="min-w-0">
-                    <h3 className="font-racing font-extrabold text-xs sm:text-sm md:text-base text-white tracking-wide truncate">
+                    <h3 className="garage-card-title font-racing font-extrabold text-xs sm:text-sm md:text-base text-white tracking-wide truncate">
                       {item.title}
                     </h3>
-                    <span className="text-[9px] sm:text-[10px] text-slate-400 hidden sm:block truncate">
+                    <span className="garage-card-subtitle text-[9px] sm:text-[10px] text-slate-400 hidden sm:block truncate">
                       {item.subtitle}
                     </span>
                   </div>
 
                   {/* Preço em Moedas no Topo */}
                   {isMax ? (
-                    <div className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-racing font-black text-[10px] sm:text-xs uppercase tracking-wider shrink-0">
+                    <div className="garage-card-price-badge px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-racing font-black text-[10px] sm:text-xs uppercase tracking-wider shrink-0">
                       MAX
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-300 font-racing font-extrabold text-[10px] sm:text-xs md:text-sm tabular-nums shrink-0 shadow-inner">
+                    <div className="garage-card-price-badge flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-300 font-racing font-extrabold text-[10px] sm:text-xs md:text-sm tabular-nums shrink-0 shadow-inner">
                       <span>🪙</span>
                       <span>{cost}</span>
                     </div>
@@ -245,13 +245,13 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
                 {/* -------------------------------------------------------- */}
                 {/* CENTRO DA CARTA: TAG DE IMAGEM PREPARADA PARA ARQUIVOS   */}
                 {/* -------------------------------------------------------- */}
-                <div className="flex-1 w-full my-2 sm:my-3 rounded-xl sm:rounded-2xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-center p-2 sm:p-3 relative overflow-hidden group-hover:border-slate-700/90 transition-all">
+                <div className="garage-card-image-box flex-1 w-full my-2 sm:my-3 rounded-xl sm:rounded-2xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-center p-2 sm:p-3 relative overflow-hidden group-hover:border-slate-700/90 transition-all">
                   {/* Tag de imagem configurada por carta com os assets enviados pelo usuário */}
                   {item.key === 'engine' && (
                     <img
                       src={getAssetUrl('/assets/aistudio/engrenagem_242918f7.png')} /* inserir imagem da engrenagem aqui */
                       alt="Motor"
-                      className="max-h-24 sm:max-h-32 md:max-h-36 max-w-[90%] object-contain drop-shadow-[0_10px_20px_rgba(56,189,248,0.35)] z-10 transition-transform duration-300 group-hover:scale-105"
+                      className="garage-card-img max-h-24 sm:max-h-32 md:max-h-36 max-w-[90%] object-contain drop-shadow-[0_10px_20px_rgba(56,189,248,0.35)] z-10 transition-transform duration-300 group-hover:scale-105"
                     />
                   )}
 
@@ -259,7 +259,7 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
                     <img
                       src={getAssetUrl('/assets/aistudio/amortecedor_df4a2a09.jpg')} /* inserir imagem da mola aqui */
                       alt="Suspensão"
-                      className="max-h-24 sm:max-h-32 md:max-h-36 max-w-[95%] object-contain rounded-xl p-1 bg-white/95 shadow-md drop-shadow-[0_10px_20px_rgba(244,63,94,0.3)] z-10 transition-transform duration-300 group-hover:scale-105"
+                      className="garage-card-img max-h-24 sm:max-h-32 md:max-h-36 max-w-[95%] object-contain rounded-xl p-1 bg-white/95 shadow-md drop-shadow-[0_10px_20px_rgba(244,63,94,0.3)] z-10 transition-transform duration-300 group-hover:scale-105"
                     />
                   )}
 
@@ -267,7 +267,7 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
                     <img
                       src={getAssetUrl('/assets/aistudio/pneu_6805bc09.png')} /* inserir imagem do pneu aqui */
                       alt="Pneus e Tração"
-                      className="max-h-24 sm:max-h-32 md:max-h-36 max-w-[90%] object-contain drop-shadow-[0_10px_20px_rgba(234,179,8,0.35)] z-10 transition-transform duration-300 group-hover:scale-105"
+                      className="garage-card-img max-h-24 sm:max-h-32 md:max-h-36 max-w-[90%] object-contain drop-shadow-[0_10px_20px_rgba(234,179,8,0.35)] z-10 transition-transform duration-300 group-hover:scale-105"
                     />
                   )}
 
@@ -275,7 +275,7 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
                     <img
                       src={getAssetUrl('/assets/aistudio/gasolina_58e7b239.png')} /* inserir imagem do galão aqui */
                       alt="Combustível"
-                      className="max-h-24 sm:max-h-32 md:max-h-36 max-w-[90%] object-contain invert brightness-125 drop-shadow-[0_10px_20px_rgba(244,63,94,0.45)] z-10 transition-transform duration-300 group-hover:scale-105"
+                      className="garage-card-img max-h-24 sm:max-h-32 md:max-h-36 max-w-[90%] object-contain invert brightness-125 drop-shadow-[0_10px_20px_rgba(244,63,94,0.45)] z-10 transition-transform duration-300 group-hover:scale-105"
                     />
                   )}
                 </div>
@@ -283,7 +283,7 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
                 {/* -------------------------------------------------------- */}
                 {/* BASE DA CARTA: NÍVEL DA PEÇA E BOTÃO DE MELHORIA         */}
                 {/* -------------------------------------------------------- */}
-                <div className="w-full shrink-0 pt-1.5 sm:pt-2 border-t border-slate-800/80 space-y-1.5 sm:space-y-2">
+                <div className="garage-card-footer w-full shrink-0 pt-1.5 sm:pt-2 border-t border-slate-800/80 space-y-1.5 sm:space-y-2">
                   <div className="flex items-center justify-between text-[10px] sm:text-xs">
                     <span className="text-slate-400 font-racing uppercase tracking-wider">
                       Nível
@@ -311,7 +311,7 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
                   <button
                     onClick={() => handleUpgradeClick(item)}
                     disabled={isMax || !canAfford}
-                    className={`w-full py-1.5 sm:py-2 px-1.5 sm:px-2 rounded-xl font-racing font-extrabold text-[10px] sm:text-xs uppercase transition shadow active:scale-95 flex items-center justify-center gap-1 ${
+                    className={`garage-card-btn w-full py-1.5 sm:py-2 px-1.5 sm:px-2 rounded-xl font-racing font-extrabold text-[10px] sm:text-xs uppercase transition shadow active:scale-95 flex items-center justify-center gap-1 ${
                       isMax
                         ? 'bg-slate-800/60 text-slate-500 border border-slate-700/40 cursor-default'
                         : canAfford
@@ -337,11 +337,11 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
       {/* ============================================================ */}
       {/* BARRA INFERIOR: AJUSTE AMORTECIMENTO E VOLTAR               */}
       {/* ============================================================ */}
-      <div className="max-w-5xl mx-auto w-full flex items-center justify-between gap-3 sm:gap-4 pt-2 pb-1 border-t border-slate-800/90 shrink-0 z-20">
+      <div className="garage-bottom-bar max-w-5xl mx-auto w-full flex items-center justify-between gap-3 sm:gap-4 pt-2 pb-1 border-t border-slate-800/90 shrink-0 z-20">
         {/* 1. Ajuste de Amortecimento */}
         <button
           onClick={() => setIsTuningOpen(true)}
-          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-8 py-2.5 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-850 hover:from-slate-800 hover:to-slate-750 border-2 border-slate-700 hover:border-cyan-400/80 text-slate-200 hover:text-white font-racing font-extrabold text-xs sm:text-sm uppercase tracking-wider transition shadow-xl active:scale-95 group"
+          className="garage-bottom-btn flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-8 py-2.5 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-850 hover:from-slate-800 hover:to-slate-750 border-2 border-slate-700 hover:border-cyan-400/80 text-slate-200 hover:text-white font-racing font-extrabold text-xs sm:text-sm uppercase tracking-wider transition shadow-xl active:scale-95 group"
         >
           <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
           <span>Ajuste de Amortecimento</span>
@@ -350,7 +350,7 @@ export const GarageScreen: React.FC<GarageScreenProps> = ({
         {/* 2. Voltar */}
         <button
           onClick={onBackToMenu}
-          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-5 sm:px-8 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border-2 border-slate-700/80 hover:border-rose-500/70 text-slate-300 hover:text-white font-racing font-extrabold text-xs sm:text-sm uppercase tracking-wider transition shadow-xl active:scale-95 group"
+          className="garage-bottom-btn flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-5 sm:px-8 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border-2 border-slate-700/80 hover:border-rose-500/70 text-slate-300 hover:text-white font-racing font-extrabold text-xs sm:text-sm uppercase tracking-wider transition shadow-xl active:scale-95 group"
         >
           <ArrowLeft className="w-4 h-4 text-rose-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
           <span>Voltar</span>

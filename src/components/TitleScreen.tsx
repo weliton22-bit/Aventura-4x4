@@ -25,9 +25,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   const safeBest = Number.isFinite(bestDistance) ? Math.max(0, Math.floor(bestDistance)) : 0;
 
   return (
-    <div className="fixed inset-0 z-30 flex flex-col justify-between pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] p-4 sm:p-8 pointer-events-auto bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 select-none overflow-hidden">
+    <div className="title-screen-container fixed inset-0 z-30 flex flex-col justify-between pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] p-4 sm:p-8 pointer-events-auto bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 select-none overflow-y-auto max-h-[100dvh] touch-pan-y">
       {/* Topo Discreto: Saldo de Moedas e Ações */}
-      <div className="flex justify-between items-center max-w-4xl mx-auto w-full">
+      <div className="title-header-wrapper flex justify-between items-center max-w-4xl mx-auto w-full shrink-0">
         <div className="flex items-center gap-2">
           <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl px-3.5 py-1.5 flex items-center gap-2 text-white shadow">
             <span className="text-xs">🪙</span>
@@ -71,21 +71,21 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       {/* Centro: Título "Aventura 4x4" e os 4 Botões Principais */}
       <div className="my-auto max-w-md mx-auto w-full text-center flex flex-col items-center">
         {/* Título Principal */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="font-racing font-black text-4xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-500 tracking-wider uppercase drop-shadow-[0_4px_20px_rgba(245,158,11,0.4)]">
+        <div className="title-heading-wrapper mb-6 sm:mb-8 shrink-0">
+          <h1 className="title-screen-heading font-racing font-black text-4xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-500 tracking-wider uppercase drop-shadow-[0_4px_20px_rgba(245,158,11,0.4)]">
             Aventura 4x4
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-racing tracking-widest uppercase mt-1">
+          <p className="title-screen-subheading text-slate-400 text-xs sm:text-sm font-racing tracking-widest uppercase mt-1">
             Desafio Off-Road de Física 2D
           </p>
         </div>
 
         {/* Os 4 Botões Principais */}
-        <div className="w-full space-y-3 sm:space-y-3.5">
+        <div className="title-screen-buttons-grid w-full space-y-3 sm:space-y-3.5">
           {/* 1. Botão Iniciar */}
           <button
             onClick={onStartGame}
-            className="w-full py-4 sm:py-4.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-racing font-black text-lg sm:text-xl uppercase tracking-wider shadow-[0_10px_30px_rgba(16,185,129,0.35)] border border-emerald-300/40 hover:brightness-110 active:scale-98 transition flex items-center justify-center gap-3"
+            className="title-btn-primary w-full py-4 sm:py-4.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-racing font-black text-lg sm:text-xl uppercase tracking-wider shadow-[0_10px_30px_rgba(16,185,129,0.35)] border border-emerald-300/40 hover:brightness-110 active:scale-98 transition flex items-center justify-center gap-3"
           >
             <Play className="w-6 h-6 fill-white" />
             <span>Iniciar</span>
@@ -94,7 +94,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           {/* 2. Botão Garagem */}
           <button
             onClick={() => onNavigate('GARAGE')}
-            className="w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-racing font-extrabold text-sm sm:text-base uppercase tracking-wider shadow-[0_6px_20px_rgba(245,158,11,0.25)] hover:brightness-110 active:scale-98 transition flex items-center justify-center gap-2.5"
+            className="title-btn-secondary w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-racing font-extrabold text-sm sm:text-base uppercase tracking-wider shadow-[0_6px_20px_rgba(245,158,11,0.25)] hover:brightness-110 active:scale-98 transition flex items-center justify-center gap-2.5"
           >
             <Wrench className="w-5 h-5 text-slate-950" />
             <span>Garagem</span>
@@ -103,7 +103,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           {/* 3. Botão Cenários */}
           <button
             onClick={() => onNavigate('STAGES')}
-            className="w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-racing font-extrabold text-sm sm:text-base uppercase tracking-wider shadow-[0_6px_20px_rgba(6,182,212,0.25)] border border-cyan-400/40 hover:brightness-110 active:scale-98 transition flex items-center justify-center gap-2.5"
+            className="title-btn-secondary w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-racing font-extrabold text-sm sm:text-base uppercase tracking-wider shadow-[0_6px_20px_rgba(6,182,212,0.25)] border border-cyan-400/40 hover:brightness-110 active:scale-98 transition flex items-center justify-center gap-2.5"
           >
             <MapPin className="w-5 h-5 text-cyan-200" />
             <span>Cenários</span>
@@ -112,7 +112,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           {/* 4. Botão Créditos */}
           <button
             onClick={() => onNavigate('CREDITS')}
-            className="w-full py-2.5 sm:py-3 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-racing font-bold text-xs sm:text-sm uppercase tracking-wider shadow active:scale-98 transition flex items-center justify-center gap-2"
+            className="title-btn-secondary w-full py-2.5 sm:py-3 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-racing font-bold text-xs sm:text-sm uppercase tracking-wider shadow active:scale-98 transition flex items-center justify-center gap-2"
           >
             <Award className="w-4 h-4 text-amber-400" />
             <span>Créditos</span>
@@ -121,7 +121,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       </div>
 
       {/* Rodapé sutil */}
-      <div className="max-w-4xl mx-auto w-full text-center">
+      <div className="title-footer-hint max-w-4xl mx-auto w-full text-center shrink-0 pt-2">
         <span className="text-[10px] text-slate-600 font-mono">
           Aventura 4x4 • Use os pedais na tela ou as teclas [W/S/D] ou [Setas]
         </span>

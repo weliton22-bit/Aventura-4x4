@@ -462,12 +462,31 @@ export default function App() {
     }
   }, []);
 
-  // Iniciar jogo a partir do menu com tela cheia automática
+  // Função isolada de redimensionamento do canvas para preencher a tela em escala 1:1 real
+  const resizeCanvasToScreen = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const w = window.innerWidth || document.documentElement.clientWidth || 800;
+    const h = window.innerHeight || document.documentElement.clientHeight || 450;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+  }, []);
+
+  // Iniciar jogo a partir do menu com tela cheia automática e sincronização imediata do canvas
   const handleStartGame = () => {
     soundManager.init();
+    // 1. Atualização imediata das dimensões do canvas antes da transição de estado
+    resizeCanvasToScreen();
     setGameState('PLAYING');
     resetRun();
     soundManager.startEngine();
+
+    // 2. Atualização logo após o contêiner receber display: block e antes do loop principal via requestAnimationFrame
+    requestAnimationFrame(() => {
+      resizeCanvasToScreen();
+    });
 
     try {
       if (typeof document !== 'undefined' && !document.fullscreenElement && document.documentElement?.requestFullscreen) {
@@ -604,9 +623,7 @@ export default function App() {
       }
       if (gameState === 'GAME_OVER' && (e.code === 'Enter' || e.code === 'Space')) {
         e.preventDefault();
-        setGameState('PLAYING');
-        resetRun();
-        soundManager.startEngine();
+        handleStartGame();
         return;
       }
 
@@ -656,21 +673,30 @@ export default function App() {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [gameState, setControlState, resetRun]);
+  }, [gameState, setControlState]);
 
-  // Redimensionamento de Canvas
+  // Redimensionamento responsivo do Canvas (resize, rotação e orientationchange)
   useEffect(() => {
-    const handleResize = () => {
-      if (!canvasRef.current) return;
-      canvasRef.current.width = window.innerWidth;
-      canvasRef.current.height = window.innerHeight;
+    window.addEventListener('resize', resizeCanvasToScreen);
+    window.addEventListener('orientationchange', resizeCanvasToScreen);
+    resizeCanvasToScreen();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvasToScreen);
+      window.removeEventListener('orientationchange', resizeCanvasToScreen);
     };
+  }, [resizeCanvasToScreen]);
 
-    window.addEventListener('resize', handleResize);
-    handleResize();
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Sincronização garantida logo que a partida for iniciada ou despausada
+  useEffect(() => {
+    if (gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'GAME_OVER') {
+      resizeCanvasToScreen();
+      const rafId = requestAnimationFrame(() => {
+        resizeCanvasToScreen();
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [gameState, resizeCanvasToScreen]);
 
   // Teste de salto da suspensão
   const handleBounceTest = () => {
@@ -697,6 +723,11 @@ export default function App() {
 
       const canvas = canvasRef.current;
       if (canvas) {
+        // Garantia de resolução e proporção 1:1 exata sem esticar ou achatar (portrait ou landscape)
+        if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
         const ctx = canvas.getContext('2d');
         if (ctx) {
           const car = carRef.current;
@@ -979,99 +1010,120 @@ export default function App() {
         <CreditsScreen onBackToMenu={() => setGameState('MENU')} />
       )}
 
-      {/* 5. TELA DE CORRIDA ATIVA (SÓ ATIVADA AO INICIAR) */}
-      {(gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'GAME_OVER') && (
-        <>
-          {/* Canvas Principal da Corrida */}
-          <canvas ref={canvasRef} className="block w-full h-full" />
+      {/* 5. TELA DE CORRIDA ATIVA (CANVAS E CAMADAS DO JOGO) */}
+      <div
+        className={`absolute inset-0 w-full h-full ${
+          gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'GAME_OVER'
+            ? 'block'
+            : 'hidden pointer-events-none'
+        }`}
+      >
+        {/* Canvas Principal da Corrida com inicialização imediata e proporção 1:1 */}
+        <canvas
+          ref={(el) => {
+            canvasRef.current = el;
+            if (el) {
+              const w = window.innerWidth || document.documentElement.clientWidth || 800;
+              const h = window.innerHeight || document.documentElement.clientHeight || 450;
+              if (el.width !== w || el.height !== h) {
+                el.width = w;
+                el.height = h;
+              }
+            }
+          }}
+          className="block w-full h-full"
+        />
 
-          {/* Interface Limpa: Apenas Barra de Combustível, Contador de Moedas e Distância */}
-          <HUD
-            telemetryRef={telemetryRef}
-            isPaused={gameState === 'PAUSED'}
-            onTogglePause={togglePause}
-          />
+        {(gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'GAME_OVER') && (
+          <>
+            {/* Interface Limpa: Apenas Barra de Combustível, Contador de Moedas e Distância */}
+            <HUD
+              telemetryRef={telemetryRef}
+              isPaused={gameState === 'PAUSED'}
+              onTogglePause={togglePause}
+            />
 
-          {/* Pedais na Tela */}
-          <Pedals
-            controls={activeControls}
-            onSetControl={setControlState}
-          />
+            {/* Pedais na Tela */}
+            <Pedals
+              controls={activeControls}
+              onSetControl={setControlState}
+            />
 
-          {/* Banner de Recorde de Distância */}
-          {biomeToast && (
-            <div className="fixed top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-4 w-full max-w-lg text-center animate-bounce">
-              <div className="bg-slate-900/95 border-2 border-amber-400 backdrop-blur-md px-4 py-2 rounded-2xl shadow-[0_10px_30px_rgba(245,158,11,0.4)] text-amber-300 font-racing font-bold text-xs sm:text-sm tracking-wide">
-                {biomeToast}
-              </div>
-            </div>
-          )}
-
-          {/* Comemoração Festiva Compacta de Passagem de Nível */}
-          {levelCelebration && <LevelCelebration data={levelCelebration} />}
-
-          {/* Modal de Fim de Corrida (Game Over) */}
-          <GameOverModal
-            isOpen={gameState === 'GAME_OVER'}
-            reason={hudData.gameOverReason}
-            distance={hudData.distance}
-            bestDistance={bestDistance}
-            runCoins={hudData.runCoins}
-            totalCoins={totalCoins}
-            onRestart={handleStartGame}
-            onOpenGarage={() => setGameState('GARAGE')}
-            onOpenMissions={() => setIsMissionsOpen(true)}
-            onBackToMenu={() => {
-              setGameState('MENU');
-              soundManager.stopEngine();
-            }}
-          />
-
-          {/* Modal de Pausa Limpo */}
-          {gameState === 'PAUSED' && (
-            <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-40 flex items-center justify-center p-4">
-              <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 text-center text-white max-w-sm w-full shadow-2xl">
-                <h2 className="font-racing font-extrabold text-2xl text-amber-400 uppercase tracking-wide mb-1">
-                  Corrida Pausada
-                </h2>
-                <p className="text-slate-300 text-xs mb-5">Pressione Continuar ou retorne ao menu.</p>
-                <div className="space-y-2.5">
-                  <button
-                    onClick={togglePause}
-                    className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-racing font-extrabold text-sm uppercase rounded-xl transition shadow active:scale-95"
-                  >
-                    Continuar Corrida
-                  </button>
-                  <button
-                    onClick={handleStartGame}
-                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-racing font-bold text-xs uppercase rounded-xl transition active:scale-95"
-                  >
-                    Reiniciar Corrida
-                  </button>
-                  <button
-                    onClick={() => {
-                      setGameState('GARAGE');
-                      soundManager.stopEngine();
-                    }}
-                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-racing font-bold text-xs uppercase rounded-xl transition active:scale-95"
-                  >
-                    Ir para Garagem
-                  </button>
-                  <button
-                    onClick={() => {
-                      setGameState('MENU');
-                      soundManager.stopEngine();
-                    }}
-                    className="w-full py-2 text-slate-400 hover:text-white font-racing text-xs transition"
-                  >
-                    Voltar ao Menu Principal
-                  </button>
+            {/* Banner de Recorde de Distância */}
+            {biomeToast && (
+              <div className="fixed top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-4 w-full max-w-lg text-center animate-bounce">
+                <div className="bg-slate-900/95 border-2 border-amber-400 backdrop-blur-md px-4 py-2 rounded-2xl shadow-[0_10px_30px_rgba(245,158,11,0.4)] text-amber-300 font-racing font-bold text-xs sm:text-sm tracking-wide">
+                  {biomeToast}
                 </div>
               </div>
-            </div>
-          )}
-        </>
-      )}
+            )}
+
+            {/* Comemoração Festiva Compacta de Passagem de Nível */}
+            {levelCelebration && <LevelCelebration data={levelCelebration} />}
+
+            {/* Modal de Fim de Corrida (Game Over) */}
+            <GameOverModal
+              isOpen={gameState === 'GAME_OVER'}
+              reason={hudData.gameOverReason}
+              distance={hudData.distance}
+              bestDistance={bestDistance}
+              runCoins={hudData.runCoins}
+              totalCoins={totalCoins}
+              onRestart={handleStartGame}
+              onOpenGarage={() => setGameState('GARAGE')}
+              onOpenMissions={() => setIsMissionsOpen(true)}
+              onBackToMenu={() => {
+                setGameState('MENU');
+                soundManager.stopEngine();
+              }}
+            />
+
+            {/* Modal de Pausa Limpo */}
+            {gameState === 'PAUSED' && (
+              <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-40 flex items-center justify-center p-4">
+                <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 text-center text-white max-w-sm w-full shadow-2xl">
+                  <h2 className="font-racing font-extrabold text-2xl text-amber-400 uppercase tracking-wide mb-1">
+                    Corrida Pausada
+                  </h2>
+                  <p className="text-slate-300 text-xs mb-5">Pressione Continuar ou retorne ao menu.</p>
+                  <div className="space-y-2.5">
+                    <button
+                      onClick={togglePause}
+                      className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-racing font-extrabold text-sm uppercase rounded-xl transition shadow active:scale-95"
+                    >
+                      Continuar Corrida
+                    </button>
+                    <button
+                      onClick={handleStartGame}
+                      className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-racing font-bold text-xs uppercase rounded-xl transition active:scale-95"
+                    >
+                      Reiniciar Corrida
+                    </button>
+                    <button
+                      onClick={() => {
+                        setGameState('GARAGE');
+                        soundManager.stopEngine();
+                      }}
+                      className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-racing font-bold text-xs uppercase rounded-xl transition active:scale-95"
+                    >
+                      Ir para Garagem
+                    </button>
+                    <button
+                      onClick={() => {
+                        setGameState('MENU');
+                        soundManager.stopEngine();
+                      }}
+                      className="w-full py-2 text-slate-400 hover:text-white font-racing text-xs transition"
+                    >
+                      Voltar ao Menu Principal
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Modal de Missões Diárias */}
       <DailyMissionsModal

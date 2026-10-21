@@ -83,3 +83,156 @@
 .animate-stunt-bonus {
   animation: stuntBonus 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* ============================================================ */
+/* REGRAS RESPONSIVAS PARA DISPOSITIVOS NA HORIZONTAL (LANDSCAPE) */
+/* ============================================================ */
+@media (orientation: landscape) and (max-height: 550px) {
+  /* PROBLEMA 1: TELA INICIAL COMPACTADA NA HORIZONTAL */
+  .title-screen-container {
+    overflow-y: auto !important;
+    max-height: 100dvh !important;
+    touch-action: pan-y !important;
+    padding-top: max(0.4rem, env(safe-area-inset-top)) !important;
+    padding-bottom: max(0.4rem, env(safe-area-inset-bottom)) !important;
+    padding-left: max(0.75rem, env(safe-area-inset-left)) !important;
+    padding-right: max(0.75rem, env(safe-area-inset-right)) !important;
+  }
+
+  .title-header-wrapper {
+    margin-bottom: 0.2rem !important;
+  }
+
+  .title-heading-wrapper {
+    margin-bottom: 0.35rem !important;
+  }
+
+  .title-screen-heading {
+    font-size: 1.6rem !important;
+    line-height: 1.1 !important;
+    margin-bottom: 0.1rem !important;
+  }
+
+  .title-screen-subheading {
+    font-size: 0.65rem !important;
+    margin-top: 0 !important;
+  }
+
+  /* Grid de 2 colunas para os 4 botões na horizontal */
+  .title-screen-buttons-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 520px !important;
+    margin: 0.2rem auto !important;
+  }
+
+  .title-btn-primary {
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .title-btn-secondary {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .title-footer-hint {
+    display: none !important;
+  }
+
+  /* PROBLEMA 2: TELA DE GARAGEM COMPACTADA NA HORIZONTAL */
+  .garage-screen-container {
+    overflow-y: auto !important;
+    max-height: 100dvh !important;
+    touch-action: pan-y !important;
+    padding: 0.35rem 0.65rem !important;
+    justify-content: space-between !important;
+  }
+
+  .garage-header-container {
+    padding-bottom: 0.15rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+
+  .garage-header-car-thumb {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  .garage-cards-grid {
+    height: auto !important;
+    min-height: 0 !important;
+    gap: 6px !important;
+    margin: 0.15rem auto !important;
+    flex: 1 1 auto !important;
+  }
+
+  .garage-upgrade-card {
+    padding: 0.35rem 0.4rem !important;
+    border-radius: 0.75rem !important;
+    justify-content: space-between !important;
+  }
+
+  .garage-card-header {
+    padding-bottom: 0.15rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+
+  .garage-card-title {
+    font-size: 0.75rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .garage-card-subtitle {
+    display: none !important;
+  }
+
+  .garage-card-price-badge {
+    padding: 0.1rem 0.3rem !important;
+    font-size: 0.65rem !important;
+  }
+
+  .garage-card-image-box {
+    margin: 0.15rem 0 !important;
+    padding: 0.15rem !important;
+    min-height: 48px !important;
+    max-height: 64px !important;
+    border-radius: 0.5rem !important;
+  }
+
+  .garage-card-img {
+    max-height: 48px !important;
+    max-width: 85% !important;
+  }
+
+  .garage-card-footer {
+    padding-top: 0.15rem !important;
+    margin-top: 0.1rem !important;
+    gap: 0.2rem !important;
+  }
+
+  .garage-card-btn {
+    padding: 0.25rem 0.2rem !important;
+    font-size: 0.65rem !important;
+    border-radius: 0.5rem !important;
+  }
+
+  .garage-bottom-bar {
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.2rem !important;
+    margin-top: 0.1rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .garage-bottom-btn {
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.35rem !important;
+    font-size: 0.75rem !important;
+    border-radius: 0.75rem !important;
+  }
+}
+

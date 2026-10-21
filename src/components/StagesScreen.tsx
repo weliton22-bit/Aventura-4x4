@@ -22,7 +22,7 @@ export const StagesScreen: React.FC<StagesScreenProps> = ({
   onBackToMenu
 }) => {
   return (
-    <div className="fixed inset-0 z-40 flex flex-col justify-between p-3 sm:p-6 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white select-none overflow-y-auto">
+    <div className="fixed inset-0 z-40 flex flex-col justify-between p-3 sm:p-6 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white select-none overflow-y-auto max-h-[100dvh] touch-pan-y">
       {/* Topo com botão de Voltar e Moedas */}
       <div className="flex items-center justify-between max-w-5xl mx-auto w-full mb-3">
         <button
