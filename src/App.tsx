@@ -98,8 +98,18 @@ export default function App() {
       const saved = localStorage.getItem('hillclimb_vehicle_upgrades_v3');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.red_speedster && parsed.orc_war_rig && parsed.monster_truck) {
-          return parsed as VehicleUpgrades;
+        if (parsed && typeof parsed === 'object') {
+          const sanitize = (u: any, def: Upgrades): Upgrades => ({
+            engine: Number.isFinite(u?.engine) ? Math.max(1, Math.floor(u.engine)) : def.engine,
+            tires: Number.isFinite(u?.tires) ? Math.max(1, Math.floor(u.tires)) : def.tires,
+            suspension: Number.isFinite(u?.suspension) ? Math.max(1, Math.floor(u.suspension)) : def.suspension,
+            fuelTank: Number.isFinite(u?.fuelTank) ? Math.max(1, Math.floor(u.fuelTank)) : def.fuelTank
+          });
+          return {
+            red_speedster: sanitize(parsed.red_speedster, DEFAULT_VEHICLE_UPGRADES.red_speedster),
+            orc_war_rig: sanitize(parsed.orc_war_rig, DEFAULT_VEHICLE_UPGRADES.orc_war_rig),
+            monster_truck: sanitize(parsed.monster_truck, DEFAULT_VEHICLE_UPGRADES.monster_truck)
+          };
         }
       }
       return DEFAULT_VEHICLE_UPGRADES;
@@ -111,7 +121,9 @@ export default function App() {
   const [totalCoins, setTotalCoins] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('hillclimb_total_coins');
-      return saved ? parseInt(saved, 10) : 0;
+      if (!saved) return 0;
+      const parsed = parseInt(saved, 10);
+      return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
     } catch {
       return 0;
     }
@@ -120,7 +132,9 @@ export default function App() {
   const [bestDistance, setBestDistance] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('hillclimb_best_dist');
-      return saved ? parseInt(saved, 10) : 0;
+      if (!saved) return 0;
+      const parsed = parseInt(saved, 10);
+      return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
     } catch {
       return 0;
     }
@@ -399,9 +413,9 @@ export default function App() {
     soundManager.stopEngine();
 
     const car = carRef.current;
-    const dist = Math.max(0, Math.floor((car.x - 100) / 10));
+    const dist = Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0;
 
-    setBestDistance((prev) => Math.max(prev, dist));
+    setBestDistance((prev) => Math.max(Number.isFinite(prev) ? prev : 0, dist));
 
     setHudData((prev) => ({
       ...prev,
@@ -419,8 +433,9 @@ export default function App() {
 
   // Manipulação de Moedas coletadas em tempo real (contabiliza imediatamente no saldo e na corrida)
   const handleCoinCollected = useCallback((val: number) => {
-    runCoinsRef.current += val;
-    setTotalCoins((prev) => prev + val);
+    const safeVal = Number.isFinite(val) && val > 0 ? val : 1;
+    runCoinsRef.current += safeVal;
+    setTotalCoins((prev) => (Number.isFinite(prev) ? prev : 0) + safeVal);
     setHudData((prev) => ({
       ...prev,
       runCoins: runCoinsRef.current
@@ -620,9 +635,12 @@ export default function App() {
           // Atualização periódica do HUD (a cada ~80ms para poupar ciclos React)
           if (now - lastHudUpdate > 80 && gameState === 'PLAYING') {
             lastHudUpdate = now;
-            const dist = Math.max(0, Math.floor((car.x - 100) / 10));
-            const speedKmh = Math.round(Math.hypot(car.vx, car.vy) * 0.18);
-            const slopeDeg = Math.round(-(car.angle) * (180 / Math.PI));
+            const dist = Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0;
+            const speedKmh = Number.isFinite(car.vx) && Number.isFinite(car.vy) ? Math.round(Math.hypot(car.vx, car.vy) * 0.18) : 0;
+            const slopeDeg = Number.isFinite(car.angle) ? Math.round(-(car.angle) * (180 / Math.PI)) : 0;
+            const safeRunCoins = Number.isFinite(runCoinsRef.current) ? Math.max(0, runCoinsRef.current) : 0;
+            const safeFuel = Number.isFinite(car.fuel) ? car.fuel : 100;
+            const safeMaxFuel = Number.isFinite(car.maxFuel) && car.maxFuel > 0 ? car.maxFuel : 100;
 
             // Detector de marcos de distância alcançada (a cada 1000m)
             const currentKm = Math.floor(dist / 1000);
@@ -637,9 +655,9 @@ export default function App() {
               distance: dist,
               speedKmh,
               slopeDeg,
-              runCoins: runCoinsRef.current,
-              fuel: car.fuel,
-              maxFuel: car.maxFuel,
+              runCoins: safeRunCoins,
+              fuel: safeFuel,
+              maxFuel: safeMaxFuel,
               gameOverReason: ''
             });
           }

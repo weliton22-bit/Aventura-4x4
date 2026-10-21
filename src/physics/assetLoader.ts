@@ -15,8 +15,20 @@ export function getAssetUrl(src: string): string {
   if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
     return src;
   }
-  // Remove barra inicial para evitar que o navegador busque na raiz do domínio do GitHub
+  // Remove barra inicial ou ./ para normalizar
   const clean = src.startsWith('/') ? src.slice(1) : src.startsWith('./') ? src.slice(2) : src;
+
+  // No navegador, suporta automaticamente subpastas do GitHub Pages (/Avetura-4x4/)
+  if (typeof window !== 'undefined' && window.location) {
+    const pathname = window.location.pathname;
+    const parts = pathname.split('/').filter(Boolean);
+    // Se estiver em repositório GitHub Pages com subpasta
+    if (parts.length > 0 && !pathname.endsWith('.html')) {
+      const baseRepo = '/' + parts[0] + '/';
+      return `${baseRepo}${clean}`;
+    }
+  }
+
   const base = import.meta.env.BASE_URL || './';
   if (base.endsWith('/')) {
     return `${base}${clean}`;
@@ -36,39 +48,38 @@ export function getImage(src: string): HTMLImageElement | null {
     return loadedStatus.get(src) ? img : null;
   }
 
-  const img = new Image();
-  img.src = resolved;
-  img.onload = () => {
-    loadedStatus.set(resolved, true);
-    loadedStatus.set(src, true);
-  };
-  img.onerror = () => {
-    // Tentativa secundária com './' direto caso base do vite seja padrão
-    const clean = src.startsWith('/') ? src.slice(1) : src;
-    const fallback = './' + clean;
-    if (fallback !== resolved) {
-      const fallbackImg = new Image();
-      fallbackImg.src = fallback;
-      fallbackImg.onload = () => {
-        loadedStatus.set(resolved, true);
-        loadedStatus.set(src, true);
-        loadedStatus.set(fallback, true);
-        imageCache.set(resolved, fallbackImg);
-        imageCache.set(src, fallbackImg);
-        imageCache.set(fallback, fallbackImg);
-      };
-      fallbackImg.onerror = () => {
-        loadedStatus.set(resolved, false);
-        loadedStatus.set(src, false);
-      };
-    } else {
+  const clean = src.startsWith('/') ? src.slice(1) : src.startsWith('./') ? src.slice(2) : src;
+  const fallbacks = [
+    resolved,
+    './' + clean,
+    '/' + clean
+  ];
+
+  const tryLoad = (idx: number) => {
+    if (idx >= fallbacks.length) {
       loadedStatus.set(resolved, false);
       loadedStatus.set(src, false);
+      return;
     }
+
+    const currentUrl = fallbacks[idx];
+    const img = new Image();
+    img.src = currentUrl;
+    img.onload = () => {
+      loadedStatus.set(resolved, true);
+      loadedStatus.set(src, true);
+      fallbacks.forEach(url => imageCache.set(url, img));
+    };
+    img.onerror = () => {
+      tryLoad(idx + 1);
+    };
   };
 
-  imageCache.set(resolved, img);
-  imageCache.set(src, img);
+  const initialImg = new Image();
+  imageCache.set(resolved, initialImg);
+  imageCache.set(src, initialImg);
+  tryLoad(0);
+
   return null;
 }
 

@@ -42,18 +42,26 @@ export const HUD: React.FC<HUDProps> = ({
 }) => {
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
-  const fuelPct = Math.max(0, Math.round((car.fuel / car.maxFuel) * 100));
+  const safeFuel = Number.isFinite(car?.fuel) ? car.fuel : 100;
+  const safeMaxFuel = Number.isFinite(car?.maxFuel) && car.maxFuel > 0 ? car.maxFuel : 100;
+  const fuelPct = Math.max(0, Math.min(100, Math.round((safeFuel / safeMaxFuel) * 100)));
   const isLowFuel = fuelPct < 25;
-  const isAirborne = !car.rearWheel.onGround && !car.frontWheel.onGround;
+  const isAirborne = !car?.rearWheel?.onGround && !car?.frontWheel?.onGround;
+
+  const safeDistance = Number.isFinite(distance) ? Math.max(0, Math.floor(distance)) : 0;
+  const safeRunCoins = Number.isFinite(currentRunCoins) ? Math.max(0, currentRunCoins) : 0;
+  const safeTotalCoins = Number.isFinite(totalCoins) ? Math.max(0, totalCoins) : 0;
+  const safeSpeed = Number.isFinite(speedKmh) ? Math.max(0, Math.round(speedKmh)) : 0;
+  const safeSlope = Number.isFinite(slopeDeg) ? Math.round(slopeDeg) : 0;
 
   return (
-    <div className="fixed top-0 left-0 right-0 p-2 sm:p-2.5 flex justify-between items-start pointer-events-none z-20 select-none">
+    <div className="fixed top-0 left-0 right-0 pt-[max(0.5rem,env(safe-area-inset-top))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] p-2 sm:p-2.5 flex justify-between items-start pointer-events-none z-20 select-none">
       {/* Painel Compacto e Minimalista (Sem poluição visual) */}
       <div className="bg-slate-900/85 backdrop-blur-md border border-slate-700/60 rounded-xl px-2.5 py-1.5 text-white shadow-lg pointer-events-auto flex flex-col gap-1 w-[185px] sm:w-[210px] transition-all duration-200">
         {/* Cabeçalho Compacto */}
         <div className="flex items-center justify-between pb-0.5 border-b border-slate-800/80">
           <span className="text-[10px] font-mono font-semibold text-cyan-300 max-w-[130px] truncate">
-            {getZoneName(distance, stageId)}
+            {getZoneName(safeDistance, stageId)}
           </span>
           <button
             onClick={() => setIsMinimized((prev) => !prev)}
@@ -68,12 +76,12 @@ export const HUD: React.FC<HUDProps> = ({
         {/* Linha Principal de Telemetria: Distância apenas em metros, Velocidade e Moedas */}
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-1.5">
-            <span className="font-racing font-bold text-base text-white tabular-nums">{distance}m</span>
-            <span className="text-[10px] font-mono text-cyan-400">{speedKmh}km/h</span>
+            <span className="font-racing font-bold text-base text-white tabular-nums">{safeDistance}m</span>
+            <span className="text-[10px] font-mono text-cyan-400">{safeSpeed}km/h</span>
           </div>
           <div className="flex items-center gap-1 font-racing text-xs text-amber-400 font-bold">
             <span className="text-[9px]">🪙</span>
-            <span>+{currentRunCoins}</span>
+            <span>+{safeRunCoins}</span>
           </div>
         </div>
 
@@ -132,7 +140,7 @@ export const HUD: React.FC<HUDProps> = ({
           title="Abrir Garagem e Oficinas"
         >
           <Wrench className="w-3 h-3" />
-          <span>Garagem ({totalCoins}🪙)</span>
+          <span>Garagem ({safeTotalCoins}🪙)</span>
         </button>
 
         {/* Ajuste de Suspensão */}

@@ -104,9 +104,14 @@ export function stepPhysics(
 
   // Modificadores de Upgrades e Atributos Próprios do Veículo Selecionado
   const vDef = VEHICLES[car.vehicleId] || VEHICLES.red_speedster;
-  const enginePower = (1900 + upgrades.engine * 320) * vDef.engineBonus;
-  const tireGrip = (2.8 + upgrades.tires * 0.35) * vDef.gripBonus;
-  const suspensionStab = 1 + upgrades.suspension * 0.08;
+  const safeEngine = Number.isFinite(upgrades?.engine) ? Math.max(1, upgrades.engine) : 1;
+  const safeTires = Number.isFinite(upgrades?.tires) ? Math.max(1, upgrades.tires) : 1;
+  const safeSusp = Number.isFinite(upgrades?.suspension) ? Math.max(1, upgrades.suspension) : 1;
+  const safeTank = Number.isFinite(upgrades?.fuelTank) ? Math.max(1, upgrades.fuelTank) : 1;
+
+  const enginePower = (1900 + safeEngine * 320) * (vDef.engineBonus || 1);
+  const tireGrip = (2.8 + safeTires * 0.35) * (vDef.gripBonus || 1);
+  const suspensionStab = 1 + safeSusp * 0.08;
 
   for (let s = 0; s < subSteps; s++) {
     let totalFx = 0;
@@ -416,7 +421,7 @@ export function stepPhysics(
     } else if (controls.brake) {
       burnRate += 2.4;
     }
-    const efficiency = Math.max(0.72, 1 - (upgrades.fuelTank - 1) * 0.035);
+    const efficiency = Math.max(0.72, 1 - (safeTank - 1) * 0.035);
     car.fuel = Math.max(0, car.fuel - burnRate * efficiency * dt);
 
     // Aviso sonoro se estiver com menos de 28%
@@ -544,5 +549,14 @@ export function stepPhysics(
     if (pt.alpha <= 0) {
       particles.splice(i, 1);
     }
+  }
+
+  // Proteção contra valores inválidos / NaN para garantir que o carro e o placar nunca congelem
+  if (!Number.isFinite(car.x) || !Number.isFinite(car.y)) {
+    car.x = Number.isFinite(car.prevX) ? car.prevX : 100;
+    car.y = Number.isFinite(car.prevY) ? car.prevY : getTerrainY(car.x) - 75;
+    car.vx = 0;
+    car.vy = 0;
+    car.angularVel = 0;
   }
 }

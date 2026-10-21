@@ -38,8 +38,11 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   const currentVehicle = VEHICLES[selectedVehicleId] || VEHICLES.red_speedster;
   const currentStage = STAGES[selectedStageId] || STAGES.stage_1_green_hills;
 
+  const safeBest = Number.isFinite(bestDistance) ? Math.max(0, Math.floor(bestDistance)) : 0;
+  const safeCoins = Number.isFinite(totalCoins) ? Math.max(0, Math.floor(totalCoins)) : 0;
+
   return (
-    <div className="fixed inset-0 z-30 flex flex-col justify-between p-3 sm:p-6 pointer-events-auto bg-gradient-to-b from-slate-950/85 via-slate-950/50 to-slate-950/95 select-none overflow-y-auto">
+    <div className="fixed inset-0 z-30 flex flex-col justify-between pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] p-3 sm:p-6 pointer-events-auto bg-gradient-to-b from-slate-950/85 via-slate-950/50 to-slate-950/95 select-none overflow-y-auto">
       {/* Topo: Estatísticas e Moedas */}
       <div className="flex justify-between items-center max-w-5xl mx-auto w-full">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -47,7 +50,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             <Trophy className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-semibold">Recorde:</span>
             <span className="font-racing font-bold text-xs sm:text-sm text-emerald-400 tabular-nums">
-              {bestDistance} m
+              {safeBest} m
             </span>
           </div>
 
@@ -55,7 +58,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             <span className="w-2 h-2 rounded-full bg-amber-400"></span>
             <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-semibold">Moedas:</span>
             <span className="font-racing font-bold text-xs sm:text-sm text-amber-400 tabular-nums">
-              {totalCoins}🪙
+              {safeCoins}🪙
             </span>
           </div>
         </div>
