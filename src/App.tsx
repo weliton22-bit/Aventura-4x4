@@ -184,6 +184,7 @@ export default function App() {
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const nextPickupIdRef = useRef<number>(1);
+  const hudFrameCountRef = useRef<number>(0);
 
   // Pré-carregamento imediato de todos os sprites dos veículos
   useEffect(() => {
@@ -393,17 +394,18 @@ export default function App() {
 
   // Iniciar jogo a partir do menu com tela cheia automática
   const handleStartGame = () => {
+    soundManager.init();
+    setGameState('PLAYING');
+    resetRun();
+    soundManager.startEngine();
+
     try {
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      if (typeof document !== 'undefined' && !document.fullscreenElement && document.documentElement?.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
     } catch {
       // Ignora restrições de permissão
     }
-    soundManager.init();
-    setGameState('PLAYING');
-    resetRun();
-    soundManager.startEngine();
   };
 
   // Tratar fim de corrida / game over
@@ -566,12 +568,14 @@ export default function App() {
 
   // Loop Principal do Jogo (60fps no Canvas)
   useEffect(() => {
-    let lastHudUpdate = performance.now();
-
     const loop = (now: number) => {
-      const rawDt = (now - lastTimeRef.current) / 1000;
-      const dt = Math.min(rawDt, 0.04);
-      lastTimeRef.current = now;
+      const currentTime = typeof now === 'number' && Number.isFinite(now) ? now : performance.now();
+      if (!Number.isFinite(lastTimeRef.current) || lastTimeRef.current <= 0) {
+        lastTimeRef.current = currentTime;
+      }
+      const rawDt = (currentTime - lastTimeRef.current) / 1000;
+      const dt = Number.isFinite(rawDt) ? Math.min(Math.max(rawDt, 0.001), 0.04) : 0.016;
+      lastTimeRef.current = currentTime;
 
       const canvas = canvasRef.current;
       if (canvas) {
@@ -613,10 +617,12 @@ export default function App() {
               selectedVehicleId
             );
           } else if (gameState === 'MENU') {
-            // No menu, movimento suave da câmera na pista para fundo vivo
-            car.x += 35 * dt;
-            car.y = getTerrainY(car.x) - 75;
-            car.angle = Math.sin(now * 0.001) * 0.05;
+            // No menu, o carro repousa na linha de largada aguardando o piloto clicar em PILOTAR
+            car.x = 100;
+            car.y = getTerrainY(100) - 75;
+            car.vx = 0;
+            car.vy = 0;
+            car.angle = Math.sin(currentTime * 0.002) * 0.015;
             ensurePickupsAhead(car.x);
           }
 
@@ -632,9 +638,9 @@ export default function App() {
             selectedStageId
           );
 
-          // Atualização periódica do HUD (a cada ~80ms para poupar ciclos React)
-          if (now - lastHudUpdate > 80 && gameState === 'PLAYING') {
-            lastHudUpdate = now;
+          // Atualização periódica do HUD (a cada 3 frames garantidos ~20fps de atualização contínua)
+          hudFrameCountRef.current = (hudFrameCountRef.current + 1) % 3;
+          if (hudFrameCountRef.current === 0 && gameState === 'PLAYING') {
             const dist = Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0;
             const speedKmh = Number.isFinite(car.vx) && Number.isFinite(car.vy) ? Math.round(Math.hypot(car.vx, car.vy) * 0.18) : 0;
             const slopeDeg = Number.isFinite(car.angle) ? Math.round(-(car.angle) * (180 / Math.PI)) : 0;

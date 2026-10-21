@@ -189,22 +189,30 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         </div>
 
         {/* CTA Principal de Início */}
-        <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex flex-col items-center gap-2.5 w-full max-w-lg">
           <button
+            type="button"
             onClick={onStartGame}
-            className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-racing font-extrabold text-base sm:text-lg uppercase tracking-wider rounded-2xl shadow-[0_10px_25px_rgba(245,158,11,0.4)] transition active:scale-95 flex items-center justify-center gap-2.5"
+            className="w-full px-8 py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-racing font-extrabold text-base sm:text-xl uppercase tracking-wider rounded-2xl shadow-[0_10px_30px_rgba(245,158,11,0.45)] transition active:scale-95 flex items-center justify-center gap-3 cursor-pointer ring-4 ring-amber-400/40 hover:ring-amber-400 animate-pulse"
           >
-            <Play className="w-5 h-5 fill-slate-950" />
-            <span>Pilotar ({currentVehicle.name})</span>
+            <Play className="w-6 h-6 fill-slate-950 text-slate-950" />
+            <span>PILOTAR AGORA ({currentVehicle.name})</span>
           </button>
 
-          <button
-            onClick={onOpenGarage}
-            className="w-full sm:w-auto px-5 py-3 bg-slate-900/90 hover:bg-slate-800 text-white font-racing font-bold text-xs sm:text-sm uppercase tracking-wider rounded-2xl border border-slate-700/80 transition active:scale-95 flex items-center justify-center gap-2"
-          >
-            <Wrench className="w-4 h-4 text-amber-400" />
-            <span>Garagem & Oficinas</span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-2">
+            <span className="text-[11px] text-amber-300 font-mono font-bold flex items-center gap-1">
+              <span>🏁</span> Na Largada (0m) · Clique em PILOTAR para pontuar!
+            </span>
+
+            <button
+              type="button"
+              onClick={onOpenGarage}
+              className="px-4 py-2 bg-slate-900/90 hover:bg-slate-800 text-white font-racing font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-700/80 transition active:scale-95 flex items-center justify-center gap-1.5"
+            >
+              <Wrench className="w-3.5 h-3.5 text-amber-400" />
+              <span>Garagem & Loja</span>
+            </button>
+          </div>
         </div>
       </div>
 
