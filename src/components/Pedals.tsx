@@ -1,7 +1,8 @@
-import React from 'react';
-import { Flame, Gauge, StepBack } from 'lucide-react';
+import React, { useState } from 'react';
+import { Flame } from 'lucide-react';
 import { KeyControls } from '../physics/engine';
 import { soundManager } from '../audio/soundManager';
+import { getAssetUrl } from '../physics/assetLoader';
 
 interface PedalsProps {
   controls: KeyControls;
@@ -9,6 +10,17 @@ interface PedalsProps {
 }
 
 export const Pedals: React.FC<PedalsProps> = ({ controls, onSetControl }) => {
+  // Estado local para resposta visual imediata (0ms de atraso nos neons e no afundamento 3D)
+  const [localPressed, setLocalPressed] = useState<{ gas: boolean; brake: boolean; boost: boolean }>({
+    gas: false,
+    brake: false,
+    boost: false
+  });
+
+  const isBrakeActive = controls.brake || localPressed.brake;
+  const isBoostActive = controls.boost || localPressed.boost;
+  const isGasActive = controls.gas || localPressed.gas;
+
   const createHandlers = (key: keyof KeyControls) => ({
     onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
       try {
@@ -16,6 +28,7 @@ export const Pedals: React.FC<PedalsProps> = ({ controls, onSetControl }) => {
       } catch {
         // Fallback para navegadores legados
       }
+      setLocalPressed((prev) => ({ ...prev, [key]: true }));
       soundManager.startEngine();
       onSetControl(key, true);
     },
@@ -27,65 +40,224 @@ export const Pedals: React.FC<PedalsProps> = ({ controls, onSetControl }) => {
       } catch {
         // Ignora erro
       }
+      setLocalPressed((prev) => ({ ...prev, [key]: false }));
       onSetControl(key, false);
     },
     onPointerCancel: () => {
+      setLocalPressed((prev) => ({ ...prev, [key]: false }));
       onSetControl(key, false);
     },
     onPointerLeave: (e: React.PointerEvent<HTMLButtonElement>) => {
-      // Se tiver pointer capture ativo, não cancela só por sair do bounds
       if (!e.currentTarget.hasPointerCapture || !e.currentTarget.hasPointerCapture(e.pointerId)) {
+        setLocalPressed((prev) => ({ ...prev, [key]: false }));
         onSetControl(key, false);
       }
     },
     onContextMenu: (e: React.MouseEvent) => e.preventDefault()
   });
 
+  const brakeImg = getAssetUrl('/assets/aistudio/gas-pedal_freio_9916b333.png');
+  const gasImg = getAssetUrl('/assets/aistudio/pedal_acelera__o_ccedc7bf.png');
+
   return (
-    <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] flex justify-between items-end pointer-events-none z-20 select-none">
-      {/* Pedal Esquerdo: Freio / Ré */}
-      <button
-        type="button"
-        {...createHandlers('brake')}
-        style={{ touchAction: 'none' }}
-        className={`pointer-events-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-700 border-2 sm:border-3 border-rose-300/80 shadow-[0_4px_0_#881337,0_10px_20px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-white transition-transform active:translate-y-1 active:brightness-110 active:shadow-[0_1px_0_#881337] cursor-pointer select-none ${
-          controls.brake ? 'translate-y-1 brightness-110 shadow-[0_1px_0_#881337]' : ''
-        }`}
-        aria-label="Pedal de Freio e Marcha Ré"
-      >
-        <StepBack className="w-5 h-5 sm:w-6 sm:h-6 mb-0.5" />
-        <span className="font-racing font-bold text-[10px] sm:text-xs tracking-wider uppercase">Freio / Ré</span>
-      </button>
+    <div className="fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] flex justify-between items-end pointer-events-none z-20 select-none pb-1">
+      {/* ============================================================ */}
+      {/* LADO ESQUERDO: PRIMEIRO O FREIO/RÉ, DEPOIS O TURBO AO LADO   */}
+      {/* ============================================================ */}
+      <div className="flex items-end gap-3 sm:gap-4 pointer-events-auto">
+        {/* 1. PEDAL DE FREIO / RÉ (NEON VERMELHO ULTRA INSTANTÂNEO & AFUNDAMENTO) */}
+        <div className="flex flex-col items-center">
+          <button
+            type="button"
+            {...createHandlers('brake')}
+            style={{ touchAction: 'none' }}
+            className="relative flex flex-col items-center justify-end p-0.5 select-none cursor-pointer focus:outline-none"
+            aria-label="Pedal de Freio e Marcha Ré"
+          >
+            {/* Caixa cavidade do pedal (Well / Footwell) */}
+            <div
+              className={`w-20 h-22 sm:w-24 sm:h-26 rounded-2xl border-2 transition-all duration-75 ease-out flex flex-col items-center justify-center p-2 relative overflow-hidden ${
+                isBrakeActive
+                  ? 'bg-slate-950 border-rose-500 shadow-[inset_0_8px_16px_rgba(0,0,0,0.95),0_0_25px_rgba(244,63,94,0.7),0_0_45px_rgba(225,29,72,0.4)]'
+                  : 'bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-slate-700/80 shadow-[0_8px_20px_rgba(0,0,0,0.7)] hover:border-slate-600'
+              }`}
+              style={{ perspective: '400px' }}
+            >
+              {/* Luz vermelha do stop/hidráulico refletida no fundo - Resposta Imediata */}
+              <div
+                className={`absolute inset-0 bg-gradient-to-t from-rose-600/60 via-rose-900/35 to-transparent transition-opacity duration-75 pointer-events-none ${
+                  isBrakeActive ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
 
-      {/* Grupo Direito: Turbo + Acelerador */}
-      <div className="flex items-end gap-2 sm:gap-3 pointer-events-auto">
-        {/* Botão de Turbo / Nitro */}
-        <button
-          type="button"
-          {...createHandlers('boost')}
-          style={{ touchAction: 'none' }}
-          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-b from-cyan-400 to-blue-600 border-2 border-cyan-200/80 shadow-[0_3px_0_#1e3a8a,0_8px_16px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center text-white transition-transform active:translate-y-1 active:brightness-110 active:shadow-[0_1px_0_#1e3a8a] cursor-pointer select-none ${
-            controls.boost ? 'translate-y-1 brightness-110 shadow-[0_1px_0_#1e3a8a]' : ''
-          }`}
-          aria-label="Botão de Nitro e Turbo"
-        >
-          <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-amber-200 mb-0.5" />
-          <span className="font-racing font-bold text-[9px] sm:text-[10px] uppercase">Turbo</span>
-        </button>
+              {/* Placa metálica do Pedal com articulação 3D (Hinge) superior */}
+              <div
+                className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out"
+                style={{
+                  transformOrigin: 'top center',
+                  transform: isBrakeActive
+                    ? 'rotateX(38deg) translateY(16px) scale(0.78)'
+                    : 'rotateX(0deg) translateY(0px) scale(1)'
+                }}
+              >
+                <img
+                  src={brakeImg}
+                  alt="Pedal de Freio"
+                  className={`w-16 h-18 sm:w-20 sm:h-22 object-contain pointer-events-none transition-all duration-75 ${
+                    isBrakeActive
+                      ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] brightness-125'
+                      : 'drop-shadow-[0_8px_12px_rgba(0,0,0,0.7)]'
+                  }`}
+                  draggable={false}
+                />
+              </div>
 
-        {/* Pedal de Aceleração */}
+              {/* Indicador luminoso de frenagem ativa (Neon Vermelho Laser contínuo e sem lag) */}
+              {isBrakeActive && (
+                <div className="absolute bottom-1 w-10 h-1.5 rounded-full bg-rose-500 shadow-[0_0_10px_#f43f5e,0_0_20px_#f43f5e,0_0_35px_#e11d48]" />
+              )}
+            </div>
+          </button>
+          <span
+            className={`font-racing font-extrabold text-[10px] sm:text-xs tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] mt-1 transition-colors ${
+              isBrakeActive ? 'text-rose-400 font-black drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]' : 'text-slate-300'
+            }`}
+          >
+            Freio / Ré
+          </span>
+        </div>
+
+        {/* 2. BOTÃO / PEDAL DE TURBO (NITRO) AO LADO DO FREIO */}
+        <div className="flex flex-col items-center">
+          <button
+            type="button"
+            {...createHandlers('boost')}
+            style={{ touchAction: 'none' }}
+            className="relative flex flex-col items-center justify-end p-0.5 select-none cursor-pointer focus:outline-none"
+            aria-label="Pedal de Turbo e Nitro"
+          >
+            {/* Caixa cavidade do pedal turbo */}
+            <div
+              className={`w-16 h-22 sm:w-19 sm:h-26 rounded-2xl border-2 transition-all duration-75 ease-out flex flex-col items-center justify-center p-2 relative overflow-hidden ${
+                isBoostActive
+                  ? 'bg-slate-950 border-cyan-400 shadow-[inset_0_8px_16px_rgba(0,0,0,0.95),0_0_25px_rgba(6,182,212,0.7),0_0_45px_rgba(14,165,233,0.4)]'
+                  : 'bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-cyan-500/70 shadow-[0_8px_20px_rgba(6,182,212,0.25)] hover:border-cyan-400'
+              }`}
+              style={{ perspective: '400px' }}
+            >
+              {/* Brilho neon de nitro */}
+              <div
+                className={`absolute inset-0 bg-gradient-to-t from-cyan-500/50 via-blue-600/30 to-transparent transition-opacity duration-75 pointer-events-none ${
+                  isBoostActive ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+
+              {/* Badge visual de Chama Turbo */}
+              <div className="absolute top-1 right-1 bg-cyan-500/80 rounded-full p-0.5 shadow z-10">
+                <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-300 fill-yellow-300 animate-pulse" />
+              </div>
+
+              {/* Placa do pedal com rotação e afundamento */}
+              <div
+                className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out"
+                style={{
+                  transformOrigin: 'top center',
+                  transform: isBoostActive
+                    ? 'rotateX(36deg) translateY(14px) scale(0.80)'
+                    : 'rotateX(0deg) translateY(0px) scale(1)'
+                }}
+              >
+                <img
+                  src={gasImg}
+                  alt="Pedal de Turbo"
+                  className={`w-12 h-16 sm:w-15 sm:h-20 object-contain pointer-events-none transition-all duration-75 hue-rotate-180 ${
+                    isBoostActive
+                      ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] brightness-140'
+                      : 'drop-shadow-[0_8px_12px_rgba(6,182,212,0.5)] brightness-110'
+                  }`}
+                  draggable={false}
+                />
+              </div>
+
+              {/* Indicador luminoso de nitro ativo */}
+              {isBoostActive && (
+                <div className="absolute bottom-1 w-8 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee,0_0_20px_#22d3ee,0_0_35px_#06b6d4]" />
+              )}
+            </div>
+          </button>
+          <span
+            className={`font-racing font-extrabold text-[10px] sm:text-xs tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] mt-1 flex items-center gap-0.5 transition-colors ${
+              isBoostActive ? 'text-cyan-300 font-black drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]' : 'text-slate-300'
+            }`}
+          >
+            <Flame className="w-2.5 h-2.5 text-amber-300 fill-amber-300" />
+            Turbo
+          </span>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* LADO DIREITO: PEDAL DE ACELERAÇÃO (AFUNDAMENTO PROFUNDO)     */}
+      {/* ============================================================ */}
+      <div className="flex flex-col items-center pointer-events-auto">
         <button
           type="button"
           {...createHandlers('gas')}
           style={{ touchAction: 'none' }}
-          className={`w-18 h-18 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 border-2 sm:border-3 border-emerald-200/90 shadow-[0_5px_0_#065f46,0_12px_22px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-white transition-transform active:translate-y-1 active:brightness-110 active:shadow-[0_1px_0_#065f46] cursor-pointer select-none ${
-            controls.gas ? 'translate-y-1 brightness-110 shadow-[0_1px_0_#065f46]' : ''
-          }`}
+          className="relative flex flex-col items-center justify-end p-0.5 select-none cursor-pointer focus:outline-none"
           aria-label="Pedal do Acelerador"
         >
-          <Gauge className="w-6 h-6 sm:w-7 sm:h-7 mb-0.5" />
-          <span className="font-racing font-bold text-xs sm:text-sm tracking-wider uppercase">Acelerar</span>
+          {/* Caixa cavidade do pedal acelerador */}
+          <div
+            className={`w-20 h-24 sm:w-24 sm:h-28 rounded-2xl border-2 transition-all duration-75 ease-out flex flex-col items-center justify-center p-2 relative overflow-hidden ${
+              isGasActive
+                ? 'bg-slate-950 border-emerald-400 shadow-[inset_0_8px_16px_rgba(0,0,0,0.95),0_0_25px_rgba(16,185,129,0.7),0_0_45px_rgba(5,150,105,0.4)]'
+                : 'bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-emerald-500/70 shadow-[0_8px_22px_rgba(16,185,129,0.3)] hover:border-emerald-400'
+            }`}
+            style={{ perspective: '400px' }}
+          >
+            {/* Brilho verde esmeralda de aceleração */}
+            <div
+              className={`absolute inset-0 bg-gradient-to-t from-emerald-500/45 via-emerald-800/25 to-transparent transition-opacity duration-75 pointer-events-none ${
+                isGasActive ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+
+            {/* Placa do acelerador com rotação e afundamento em direção ao fundo */}
+            <div
+              className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out"
+              style={{
+                transformOrigin: 'bottom center',
+                transform: isGasActive
+                  ? 'rotateX(-34deg) translateY(16px) scale(0.82)'
+                  : 'rotateX(0deg) translateY(0px) scale(1)'
+              }}
+            >
+              <img
+                src={gasImg}
+                alt="Pedal do Acelerador"
+                className={`w-15 h-20 sm:w-18 sm:h-24 object-contain pointer-events-none transition-all duration-75 ${
+                  isGasActive
+                    ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] brightness-125'
+                    : 'drop-shadow-[0_8px_14px_rgba(0,0,0,0.7)]'
+                }`}
+                draggable={false}
+              />
+            </div>
+
+            {/* Indicador luminoso de aceleração ativa */}
+            {isGasActive && (
+              <div className="absolute bottom-1 w-10 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399,0_0_20px_#34d399,0_0_35px_#059669]" />
+            )}
+          </div>
         </button>
+        <span
+          className={`font-racing font-black text-xs sm:text-sm tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] mt-1 transition-colors ${
+            isGasActive ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-slate-300'
+          }`}
+        >
+          Acelerar
+        </span>
       </div>
     </div>
   );

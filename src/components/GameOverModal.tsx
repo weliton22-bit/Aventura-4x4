@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, Wrench, Trophy, Coins, AlertTriangle } from 'lucide-react';
+import { RotateCcw, Wrench, Trophy, Coins, AlertTriangle, Target } from 'lucide-react';
 
 interface GameOverModalProps {
   isOpen: boolean;
@@ -10,6 +10,8 @@ interface GameOverModalProps {
   totalCoins: number;
   onRestart: () => void;
   onOpenGarage: () => void;
+  onOpenMissions?: () => void;
+  onBackToMenu?: () => void;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -20,7 +22,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   runCoins,
   totalCoins,
   onRestart,
-  onOpenGarage
+  onOpenGarage,
+  onOpenMissions,
+  onBackToMenu
 }) => {
   if (!isOpen) return null;
 
@@ -85,13 +89,34 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             <span>Tentar Novamente</span>
           </button>
 
-          <button
-            onClick={onOpenGarage}
-            className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-racing font-bold text-sm uppercase rounded-xl transition flex items-center justify-center gap-2"
-          >
-            <Wrench className="w-4 h-4 text-amber-400" />
-            <span>Oficina de Upgrades</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={onOpenGarage}
+              className="py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-racing font-bold text-xs uppercase rounded-xl transition flex items-center justify-center gap-1.5"
+            >
+              <Wrench className="w-3.5 h-3.5 text-amber-400" />
+              <span>Oficina</span>
+            </button>
+
+            {onOpenMissions && (
+              <button
+                onClick={onOpenMissions}
+                className="py-2.5 bg-gradient-to-r from-cyan-600/80 to-blue-600/80 hover:from-cyan-500 hover:to-blue-500 text-white border border-cyan-400/50 font-racing font-bold text-xs uppercase rounded-xl transition flex items-center justify-center gap-1.5 shadow"
+              >
+                <Target className="w-3.5 h-3.5 text-cyan-200" />
+                <span>Missões</span>
+              </button>
+            )}
+          </div>
+
+          {onBackToMenu && (
+            <button
+              onClick={onBackToMenu}
+              className="w-full py-2 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 font-racing font-semibold text-xs uppercase rounded-xl transition"
+            >
+              Voltar ao Menu Principal
+            </button>
+          )}
         </div>
 
         <span className="text-[10px] text-slate-500 mt-3 block">

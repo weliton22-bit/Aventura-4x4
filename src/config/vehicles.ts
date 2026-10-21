@@ -65,7 +65,7 @@ export const VEHICLES: Record<VehicleId, VehicleDef> = {
     unlockCost: 0          // Grátis desde o início
   },
 
-  // Carro 2: 300 Moedas. Blindagem reforçada, rodas denteadas com espinhos e muito mais torque.
+  // Carro 2: 800 Moedas. Blindagem reforçada, rodas denteadas com espinhos e muito mais torque.
   orc_war_rig: {
     id: 'orc_war_rig',
     name: 'Aríete de Guerra Orc',
@@ -89,13 +89,13 @@ export const VEHICLES: Record<VehicleId, VehicleDef> = {
     suspensionRestLength: 54,
     mass: 3.1,
     inertia: 7400,
-    engineBonus: 1.50,     // +50% de torque nativo! Escala rampas com extrema facilidade
-    gripBonus: 1.45,       // +45% de aderência nos pneus cravados
+    engineBonus: 1.20,     // +20% de torque nativo (escalador firme e controlado)
+    gripBonus: 1.35,       // +35% de aderência nos pneus cravados
     fuelCapacity: 135,     // Tanque maior nativo: 135L (+35% de autonomia)
-    unlockCost: 300        // Desbloqueável com 300 moedas
+    unlockCost: 800        // Desbloqueável com 800 moedas conforme balanceamento
   },
 
-  // Carro 3: 600 Moedas. Máquina definitiva! Rodas gigantes, suspensão alta e motor V8 Supercharged colossal.
+  // Carro 3: 2.000 Moedas. Máquina definitiva! Rodas gigantes, suspensão alta e motor V8 Supercharged colossal.
   monster_truck: {
     id: 'monster_truck',
     name: 'Monster Truck Fogo Azul',
@@ -119,9 +119,9 @@ export const VEHICLES: Record<VehicleId, VehicleDef> = {
     suspensionRestLength: 64, // Suspensão gigante com absorção de impacto máxima
     mass: 3.5,
     inertia: 8800,
-    engineBonus: 2.10,     // +110% de força motriz nativa! Escala paredes e salta como um foguete
-    gripBonus: 1.90,       // +90% de aderência nos pneus tratorados
+    engineBonus: 1.35,     // +35% de força motriz nativa (forte e equilibrado)
+    gripBonus: 1.60,       // +60% de aderência nos pneus tratorados
     fuelCapacity: 170,     // Tanque gigante nativo: 170L (+70% de autonomia)
-    unlockCost: 600        // Desbloqueável com 600 moedas
+    unlockCost: 2000       // Desbloqueável com 2.000 moedas conforme balanceamento
   }
 };

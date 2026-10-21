@@ -228,15 +228,12 @@ class SoundManager {
     // Frequência base de rotação conforme velocidade do carro
     let targetFreq = baseIdleFreq + Math.min(speedKmh * rpmClimbFactor, 140);
 
-    // Resposta imediata e automática de giro ao pisar no acelerador
-    if (isAccelerating) {
+    // Resposta imediata e vigorosa de giro ao acelerar ou engatar a marcha ré
+    if (isAccelerating || isBraking) {
       targetFreq += throttleBoost;
     }
     if (isBoost) {
       targetFreq += 75;
-    }
-    if (isBraking) {
-      targetFreq = Math.max(baseIdleFreq - 6, targetFreq - 22);
     }
 
     targetFreq = Math.min(maxFreq, Math.max(26, targetFreq));
@@ -245,10 +242,10 @@ class SoundManager {
     this.primaryOsc.frequency.setTargetAtTime(targetFreq, t, 0.05);
     this.subOsc.frequency.setTargetAtTime(targetFreq * 0.5, t, 0.05);
 
-    // O filtro abre instantaneamente ao acelerar, liberando a respiração e estalo do motor
+    // O filtro abre instantaneamente ao acelerar ou na ré, liberando a respiração e estalo do motor
     let filterFreq = targetFreq * 2.2;
-    if (isAccelerating) {
-      filterFreq = targetFreq * 3.8 + 220; // Aberto, rugindo forte com o pé no acelerador
+    if (isAccelerating || isBraking) {
+      filterFreq = targetFreq * 3.8 + 220; // Aberto, rugindo forte com o pé no acelerador ou marcha ré
     }
     if (isBoost) {
       filterFreq = targetFreq * 4.6 + 450;
@@ -256,13 +253,13 @@ class SoundManager {
     this.engineFilter.frequency.setTargetAtTime(Math.min(1300, filterFreq), t, 0.05);
 
     // Volume do motor dinâmico: discreto na lenta / parado (0.055)
-    // e encorpado e potente automaticamente ao acelerar (0.18 a 0.24)
+    // e encorpado e potente automaticamente ao acelerar ou dar ré (0.18 a 0.24)
     let targetGain = 0.055;
     if (speedKmh > 6) {
       targetGain = 0.08 + Math.min(speedKmh * 0.001, 0.05);
     }
-    if (isAccelerating) {
-      targetGain = isBoost ? 0.24 : 0.18; // Ronco encorpado imediato
+    if (isAccelerating || isBraking) {
+      targetGain = isBoost ? 0.24 : 0.18; // Ronco encorpado imediato tanto para frente quanto na ré
     } else if (isBoost) {
       targetGain = 0.22;
     }
@@ -513,6 +510,71 @@ class SoundManager {
 
       osc.start(now);
       osc.stop(now + 0.22);
+    } catch {
+      // Ignora erro
+    }
+  }
+
+  // Efeito Sonoro Festivo de Passagem de Nível / Level Checkpoint
+  // Fanfarra triunfante cintilante com arpeggio dourado
+  public playLevelUp() {
+    if (this.isMuted || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      // Arpeggio de comemoração: C5, E5, G5, B5, C6, G6
+      const notes = [523.25, 659.25, 783.99, 987.77, 1046.5, 1567.98];
+      const step = 0.08;
+
+      notes.forEach((freq, i) => {
+        if (!this.ctx) return;
+        const noteTime = now + i * step;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = i === notes.length - 1 ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(freq, noteTime);
+
+        gain.gain.setValueAtTime(0.24, noteTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(noteTime);
+        osc.stop(noteTime + 0.35);
+      });
+    } catch {
+      // Ignora erro
+    }
+  }
+
+  // Efeito Sonoro Festivo de Acrobacia / Flip Bonus (Mortal completado com pouso seguro)
+  public playFlipBonus() {
+    if (this.isMuted || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      // Tríade brilhante ascendente e comemorativa: F5, A5, C6, F6
+      const notes = [698.46, 880.0, 1046.5, 1396.91];
+      const step = 0.065;
+
+      notes.forEach((freq, idx) => {
+        if (!this.ctx) return;
+        const noteTime = now + idx * step;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = idx === notes.length - 1 ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(freq, noteTime);
+
+        gain.gain.setValueAtTime(0.22, noteTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.28);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(noteTime);
+        osc.stop(noteTime + 0.28);
+      });
     } catch {
       // Ignora erro
     }

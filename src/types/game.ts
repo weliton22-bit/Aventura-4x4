@@ -1,4 +1,4 @@
-export type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'GAME_OVER';
+export type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'STAGES' | 'CREDITS' | 'GAME_OVER';
 
 export interface Upgrades {
   engine: number;      // 1 a 10: Torque e velocidade máxima
@@ -51,6 +51,10 @@ export interface CarState {
   gameOverReason: string;
   upsideDownTimer: number;
   airTimer: number;
+  throttleRamp?: number;
+  airRotation?: number;
+  completedFlips?: number;
+  lastFlipType?: 'Frontflip' | 'Backflip';
   vehicleId: VehicleId;
   rearWheel: WheelState;
   frontWheel: WheelState;

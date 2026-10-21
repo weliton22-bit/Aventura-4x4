@@ -38,6 +38,9 @@ export function createInitialCar(
     gameOverReason: '',
     upsideDownTimer: 0,
     airTimer: 0,
+    throttleRamp: 0,
+    airRotation: 0,
+    completedFlips: 0,
     vehicleId: vehicleId,
     rearWheel: {
       offsetX: vDef.rearWheelOffsetX,
@@ -90,7 +93,8 @@ export function stepPhysics(
   dt: number,
   onCoinCollected: (val: number) => void,
   onGameOver: (reason: string) => void,
-  stageId: StageId = 'stage_1_green_hills'
+  stageId: StageId = 'stage_1_green_hills',
+  onFuelCollected?: () => void
 ) {
   if (car.isGameOver) return;
 
@@ -109,8 +113,23 @@ export function stepPhysics(
   const safeSusp = Number.isFinite(upgrades?.suspension) ? Math.max(1, upgrades.suspension) : 1;
   const safeTank = Number.isFinite(upgrades?.fuelTank) ? Math.max(1, upgrades.fuelTank) : 1;
 
-  const enginePower = (1900 + safeEngine * 320) * (vDef.engineBonus || 1);
-  const tireGrip = (2.8 + safeTires * 0.35) * (vDef.gripBonus || 1);
+  // Curva de Aceleração e Ré Realista e Progressiva:
+  // Agora a marcha ré recebe a mesma potência, torque e rampa de aceleração do pedal dianteiro!
+  if ((controls.gas || controls.boost || controls.brake) && car.fuel > 0) {
+    const rampRate = controls.boost ? 0.90 : 0.40;
+    car.throttleRamp = Math.min(1.0, (car.throttleRamp || 0) + dt * rampRate);
+  } else {
+    car.throttleRamp = Math.max(0, (car.throttleRamp || 0) - dt * 1.4);
+  }
+
+  // Fator progressivo de torque: escala de 0.65 até 1.55 no pedal, ou 1.70 no Turbo
+  let throttleFactor = 0.65 + (car.throttleRamp || 0) * 0.90;
+  if (controls.boost) {
+    throttleFactor = Math.max(throttleFactor, 1.70);
+  }
+
+  const enginePower = (1320 + safeEngine * 170) * (vDef.engineBonus || 1) * throttleFactor;
+  const tireGrip = (2.7 + safeTires * 0.32) * (vDef.gripBonus || 1);
   const suspensionStab = 1 + safeSusp * 0.08;
 
   for (let s = 0; s < subSteps; s++) {
@@ -174,8 +193,8 @@ export function stepPhysics(
         const compressionVel = (compression - wheel.prevCompression) / subDt;
         wheel.prevCompression = compression;
 
-        // Amortecimento de retorno (rebound damping) reforçado para absorver impactos e eliminar saltos em looping
-        const dampingCoeff = compressionVel < 0 ? suspension.damping * 2.4 : suspension.damping;
+        // Amortecimento de retorno natural (permite que a suspensão empurre o carro em cristas para saltos reais)
+        const dampingCoeff = compressionVel < 0 ? suspension.damping * 1.05 : suspension.damping;
         let springForce = suspension.stiffness * suspensionStab * compression;
         let damperForce = dampingCoeff * suspensionStab * compressionVel;
 
@@ -198,19 +217,24 @@ export function stepPhysics(
         wheel.worldY = mountY + strutDirY * wheel.legLength;
 
         // Força motriz e tração (4x4 com auxílio ativo de subida de rampa)
+        // Força motriz e tração (4x4 com potência idêntica para ré e aceleração à frente)
         let driveForce = 0;
         if (car.fuel > 0) {
           if (controls.gas) {
-            driveForce = enginePower * powerRatio;
+            driveForce += enginePower * powerRatio;
             // Compensação vetorial da gravidade ao longo da rampa (garante subida de qualquer inclinação!)
             const slopeGravityResist = Math.max(0, -terrain.tangentY) * car.mass * gravity;
             driveForce += slopeGravityResist * 1.35 * powerRatio;
           }
           if (controls.brake) {
-            driveForce = -enginePower * 0.75 * powerRatio;
+            // Marcha ré com a MESMA potência integral do motor e compensação de rampa!
+            driveForce -= enginePower * powerRatio;
+            const slopeGravityResist = Math.max(0, terrain.tangentY) * car.mass * gravity;
+            driveForce -= slopeGravityResist * 1.35 * powerRatio;
           }
           if (controls.boost) {
-            driveForce += (enginePower * 0.95 + 850) * powerRatio;
+            // Propulsão ativa com jato massivo independente de estar pisando no acelerador
+            driveForce += (enginePower * 1.15 + 1100) * powerRatio;
           }
         }
 
@@ -221,6 +245,9 @@ export function stepPhysics(
         // Se o jogador estiver acelerando e a velocidade for nula ou negativa na subida, trava o recuo
         if (controls.gas && car.fuel > 0 && tangentVel < 5 && terrain.tangentY < -0.05) {
           rollingResistance += Math.abs(tangentVel) * tireGrip * 2.2;
+        } else if (controls.brake && car.fuel > 0 && tangentVel > -5 && terrain.tangentY > 0.05) {
+          // Na marcha ré subindo rampa inclinada para trás, trava o recuo para frente
+          rollingResistance -= Math.abs(tangentVel) * tireGrip * 2.2;
         }
 
         const totalTraction = driveForce + rollingResistance;
@@ -233,7 +260,11 @@ export function stepPhysics(
         totalTorque += (mountRelX * tracFy - mountRelY * tracFx) * 0.06;
 
         wheel.spinSpeed = tangentVel / car.wheelRadius;
-        if (controls.gas && car.fuel > 0) wheel.spinSpeed += 3;
+        if ((controls.gas || controls.boost) && car.fuel > 0) {
+          wheel.spinSpeed += controls.boost ? 4.0 : (1.0 + (car.throttleRamp || 0) * 1.8);
+        } else if (controls.brake && car.fuel > 0) {
+          wheel.spinSpeed -= (1.0 + (car.throttleRamp || 0) * 1.8);
+        }
       } else {
         wheel.onGround = false;
         wheel.legLength += (maxLeg - wheel.legLength) * Math.min(1, subDt * 16);
@@ -242,8 +273,9 @@ export function stepPhysics(
         wheel.worldX = mountX + strutDirX * wheel.legLength;
         wheel.worldY = mountY + strutDirY * wheel.legLength;
 
-        if (controls.gas && car.fuel > 0) wheel.spinSpeed = 16;
-        else if (controls.brake && car.fuel > 0) wheel.spinSpeed = -12;
+        if (controls.boost && car.fuel > 0) wheel.spinSpeed = 24;
+        else if (controls.gas && car.fuel > 0) wheel.spinSpeed = 10 + (car.throttleRamp || 0) * 8;
+        else if (controls.brake && car.fuel > 0) wheel.spinSpeed = -(10 + (car.throttleRamp || 0) * 8);
         else wheel.spinSpeed *= 0.98;
       }
 
@@ -316,34 +348,37 @@ export function stepPhysics(
 
       // Se a frente do carro estiver empinando desnecessariamente acima do terreno (angleDiff < -0.06):
       // Aplica torque corretivo forte que empurra o bico para baixo mantendo o carro colado na subida!
-      if (angleDiff < -0.06) {
-        const antiWheelieTorque = Math.abs(angleDiff) * 28000;
-        totalTorque += antiWheelieTorque; // Positivo em canvas gira sentido horário (abaixa o nariz)
+      // Torque anti-empinamento moderado: só atua se a empinada for muito extrema (< -0.35)
+      // Permite que o carro levante a frente ao saltar sobre colinas para aquele suspense real de capotamento!
+      if (angleDiff < -0.35) {
+        const antiWheelieTorque = Math.abs(angleDiff) * 8500;
+        totalTorque += antiWheelieTorque;
       }
 
-      // Amortecimento rotacional reforçado no chão para estabilidade total
-      car.angularVel *= Math.pow(0.85, subDt * 60);
+      // Amortecimento rotacional no solo
+      car.angularVel *= Math.pow(0.88, subDt * 60);
 
-      // Downforce de solo
-      totalFx += terrainAtCar.normalX * -450;
-      totalFy += terrainAtCar.normalY * -450;
+      // Tração suave com o solo (sem grudar artificialmente para permitir decolagens e saltos)
+      totalFx += terrainAtCar.normalX * -60;
+      totalFy += terrainAtCar.normalY * -60;
     } else {
       // ==========================================
-      // ESTABILIDADE E CONTROLES AÉREOS REFINADOS
+      // CONTROLE AÉREO E RISCO REAL DE CAPOTAMENTO
       // ==========================================
-      // Acelerar inclina para trás (levanta bico) | Frear embica para frente (abaixa bico)
-      const airPitchTorque = 5200;
+      // Acelerar no ar inclina para trás (pode dar backflip ou capotar se exagerar!)
+      // Frear no ar embica para frente (essencial para aterrisar suavemente alinhado na descida)
+      const airPitchTorque = 6500;
 
       if (car.fuel > 0) {
         if (controls.gas) {
-          totalTorque -= airPitchTorque; // Sentido anti-horário: levanta o nariz
+          totalTorque -= airPitchTorque;
         }
         if (controls.brake) {
-          totalTorque += airPitchTorque; // Sentido horário: embica para baixo
+          totalTorque += airPitchTorque;
         }
         if (controls.boost) {
-          totalFx += cosA * 850;
-          totalFy += sinA * 850;
+          totalFx += cosA * 1150;
+          totalFy += sinA * 700;
         }
       }
 
@@ -382,9 +417,22 @@ export function stepPhysics(
     car.vx += (totalFx / car.mass) * subDt;
     car.vy += (totalFy / car.mass) * subDt;
 
-    // Resistência do ar aerodinâmica
-    car.vx *= Math.pow(0.994, subDt * 60);
-    car.vy *= Math.pow(0.997, subDt * 60);
+    // Resistência do ar aerodinâmica suave e progressiva
+    car.vx *= Math.pow(0.988, subDt * 60);
+    car.vy *= Math.pow(0.995, subDt * 60);
+
+    // Limitação progressiva de velocidade (Ajustado um pouquinho mais rápido para permitir saltos emocionantes):
+    // - 1ª marcha (arranque): ~40-44 km/h
+    // - 2ª a 4ª marcha (embalando na pista): cresce progressivamente até ~78-85 km/h
+    // - Propulsão / Turbo NITRO: decola a ~105-112 km/h!
+    const baseSpeedX = 245 + safeEngine * 18;
+    let maxSpeedX = baseSpeedX + (car.throttleRamp || 0) * 215;
+    if (controls.boost) {
+      maxSpeedX += 165;
+    }
+    // Velocidade e potência máxima em marcha ré equivalente à aceleração para frente
+    const maxReverseSpeedX = -(baseSpeedX + (car.throttleRamp || 0) * 215);
+    car.vx = Math.max(maxReverseSpeedX, Math.min(maxSpeedX, car.vx));
 
     car.x += car.vx * subDt;
     car.y += car.vy * subDt;
@@ -407,35 +455,34 @@ export function stepPhysics(
     car.airTimer = 0;
   }
 
-  // Consumo rápido de combustível conforme solicitado pelo usuário:
-  // - Motor ligado: 2.8 u/s
-  // - Aceleração com pedal [Gas]: +5.8 u/s (Total: 8.6 u/s => ~11-12s de aceleração pura sem pegar galão)
-  // - Turbo Nitro [Boost]: +12.5 u/s (Total: 15.3 u/s => consome rápido durante nitro)
-  // - Freio / Ré [Brake]: +2.4 u/s
+  // Consumo desafiador e veloz (Estilo Hill Climb Racing):
+  // - Marcha lenta / parado: 2.0 u/s
+  // - Acelerando com pedal [Gas] ou [Brake/Ré]: 12.5 u/s total (mesma potência e tração do motor!)
+  // - Turbo Nitro [Boost]: +16.0 u/s adicional (Total 28.5 u/s)
   if (car.fuel > 0) {
-    let burnRate = 2.8;
+    let burnRate = 2.0;
     if (controls.boost) {
-      burnRate += 12.5;
-    } else if (controls.gas) {
-      burnRate += 5.8;
-    } else if (controls.brake) {
-      burnRate += 2.4;
+      burnRate += 16.0;
+    } else if (controls.gas || controls.brake) {
+      burnRate += 10.5; // Potência integral fornecida ao motor tanto para frente quanto na marcha ré
     }
-    const efficiency = Math.max(0.72, 1 - (safeTank - 1) * 0.035);
+    const efficiency = Math.max(0.75, 1 - (safeTank - 1) * 0.03);
     car.fuel = Math.max(0, car.fuel - burnRate * efficiency * dt);
 
-    // Aviso sonoro se estiver com menos de 28%
-    if (car.fuel / car.maxFuel < 0.28) {
+    // Aviso sonoro suave quando abaixo de 30%
+    if (car.fuel / car.maxFuel < 0.30) {
       soundManager.playLowFuelWarning();
     }
   }
 
-    // Partículas de poeira e escapamento
-    if (car.rearWheel.onGround && (controls.gas || controls.boost) && Math.random() < 0.7) {
+    // Partículas de poeira e escapamento (para frente ou marcha ré com tração ativa)
+    if ((car.rearWheel.onGround || car.frontWheel.onGround) && (controls.gas || controls.boost || controls.brake) && Math.random() < 0.7) {
+      const activeWheel = controls.brake ? car.frontWheel : car.rearWheel;
+      const kickDir = controls.brake ? 1 : -1;
       particles.push({
-        x: car.rearWheel.worldX - 8,
-        y: car.rearWheel.worldY + car.wheelRadius - 3,
-        vx: -car.vx * 0.3 - 40 - Math.random() * 45,
+        x: activeWheel.worldX + (controls.brake ? 8 : -8),
+        y: activeWheel.worldY + car.wheelRadius - 3,
+        vx: -car.vx * 0.3 + kickDir * (40 + Math.random() * 45),
         vy: -18 - Math.random() * 30,
         size: 5 + Math.random() * 6,
         alpha: 0.85,
@@ -496,10 +543,11 @@ export function stepPhysics(
           });
         }
       } else if (p.type === 'fuel') {
-        // Recarga de combustível garantida (50% do tanque atual)
-        const refillAmount = car.maxFuel * 0.52;
+        // Recarga de combustível desafiadora (+45% do tanque atual)
+        const refillAmount = car.maxFuel * 0.45;
         car.fuel = Math.min(car.maxFuel, car.fuel + refillAmount);
         soundManager.playFuel();
+        if (onFuelCollected) onFuelCollected();
 
         // Partículas verdes/vermelhas de recarga
         for (let k = 0; k < 8; k++) {

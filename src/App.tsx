@@ -14,10 +14,17 @@ import { STAGES } from './config/stages';
 import { preloadAllVehicleAssets } from './physics/assetLoader';
 import { HUD, TelemetryData } from './components/HUD';
 import { Pedals } from './components/Pedals';
-import { SuspensionTuningPanel } from './components/SuspensionTuningPanel';
-import { GarageModal } from './components/GarageModal';
+import { GarageScreen } from './components/GarageScreen';
+import { StagesScreen } from './components/StagesScreen';
+import { CreditsScreen } from './components/CreditsScreen';
 import { GameOverModal } from './components/GameOverModal';
 import { TitleScreen } from './components/TitleScreen';
+import { getCheckpointForDistance, LEVEL_CHECKPOINTS } from './config/checkpoints';
+import { LevelCelebration, LevelCelebrationData } from './components/LevelCelebration';
+import { DailyMissionsModal } from './components/DailyMissionsModal';
+import { loadDailyMissions, recordMissionProgress, countUnclaimedMissions } from './utils/missionsManager';
+import { DailyMission } from './types/missions';
+import { Target } from 'lucide-react';
 
 const DEFAULT_VEHICLE_UPGRADES: VehicleUpgrades = {
   red_speedster: { engine: 1, tires: 1, suspension: 1, fuelTank: 1 },
@@ -140,14 +147,34 @@ export default function App() {
     }
   });
 
-  const [suspension, setSuspension] = useState<SuspensionConfig>(DEFAULT_SUSPENSION);
+  const [suspension, setSuspension] = useState<SuspensionConfig>(() => {
+    try {
+      const saved = localStorage.getItem('hillclimb_suspension_cfg');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.stiffness === 'number') {
+          return { ...DEFAULT_SUSPENSION, ...parsed };
+        }
+      }
+    } catch {
+      // Ignora erro
+    }
+    return DEFAULT_SUSPENSION;
+  });
 
-  // Estado da UI
+  // Estado da Navegação entre Telas
   const [gameState, setGameState] = useState<GameState>('MENU');
-  const [isTuningOpen, setIsTuningOpen] = useState<boolean>(false);
-  const [isGarageOpen, setIsGarageOpen] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(() => soundManager.getMuted());
   const [biomeToast, setBiomeToast] = useState<string | null>(null);
+  const [levelCelebration, setLevelCelebration] = useState<LevelCelebrationData | null>(null);
+  const [isMissionsOpen, setIsMissionsOpen] = useState<boolean>(false);
+  const [unclaimedMissionsCount, setUnclaimedMissionsCount] = useState<number>(() =>
+    countUnclaimedMissions(loadDailyMissions())
+  );
+  const [missionToast, setMissionToast] = useState<{ title: string; rewardCoins: number } | null>(null);
+  const fuelCansCollectedRef = useRef<number>(0);
+  const lastStage2DistanceRef = useRef<number>(0);
+  const airTimeAccumulatorRef = useRef<number>(0);
 
   // Métricas do HUD (atualizadas em taxa moderada para performance)
   const [hudData, setHudData] = useState({
@@ -166,6 +193,11 @@ export default function App() {
     brake: false,
     boost: false
   });
+  const [activeControls, setActiveControls] = useState<KeyControls>({
+    gas: false,
+    brake: false,
+    boost: false
+  });
 
   // Estado da simulação (isolado para 60fps sem render reentrante de React)
   const carRef = useRef<CarState>(
@@ -178,8 +210,9 @@ export default function App() {
   const pickupsRef = useRef<Pickup[]>([]);
   const particlesRef = useRef<Particle[]>([]);
   const lastGeneratedXRef = useRef<number>(300);
-  const nextFuelXRef = useRef<number>(540);
+  const nextFuelXRef = useRef<number>(1950);
   const lastKmMarkRef = useRef<number>(0);
+  const lastCompletedLevelRef = useRef<number>(0);
   const runCoinsRef = useRef<number>(0);
   const totalCoinsRef = useRef<number>(totalCoins);
   const telemetryRef = useRef<TelemetryData>({
@@ -190,7 +223,11 @@ export default function App() {
     totalCoins: totalCoins,
     fuel: 100,
     maxFuel: 100,
-    isAirborne: false
+    isAirborne: false,
+    currentLevel: 1,
+    targetMeters: 200,
+    prevTargetMeters: 0,
+    levelProgressPct: 0
   });
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
@@ -285,10 +322,10 @@ export default function App() {
         });
       }
 
-      // Dificuldade progressiva da Gasolina:
-      // A cada 1000m os galões se distanciam gradualmente (de 500px até ~940px),
-      // exigindo melhor controle de acelerador e upgrades, mas 100% jogável e nunca impossível!
-      const fuelInterval = Math.min(940, 500 + tier * 65);
+      // Espaçamento dos galões de gasolina ampliado conforme solicitado:
+      // Galões surgem a cada 185 a 230 metros (1850px a 2300px)
+      // Exige acelerar com controle e velocidade para não ter pane seca antes de alcançar o próximo!
+      const fuelInterval = Math.min(2300, 1850 + tier * 60);
 
       if (baseX >= nextFuelXRef.current) {
         const fuelX = baseX + 200;
@@ -304,7 +341,7 @@ export default function App() {
         nextFuelXRef.current = baseX + fuelInterval;
       }
 
-      lastGeneratedXRef.current += 460;
+      lastGeneratedXRef.current += 380;
     }
   }, []);
 
@@ -317,8 +354,13 @@ export default function App() {
     pickupsRef.current = [];
     particlesRef.current = [];
     lastGeneratedXRef.current = startX + 200;
-    nextFuelXRef.current = startX + 440;
+    nextFuelXRef.current = startX + 1850; // Primeiro galão aos ~185 metros!
+    fuelCansCollectedRef.current = 0;
+    lastStage2DistanceRef.current = 0;
+    airTimeAccumulatorRef.current = 0;
     lastKmMarkRef.current = 0;
+    lastCompletedLevelRef.current = 0;
+    setLevelCelebration(null);
     setBiomeToast(null);
     runCoinsRef.current = 0;
     nextPickupIdRef.current = 1;
@@ -332,7 +374,11 @@ export default function App() {
       totalCoins: totalCoinsRef.current,
       fuel: carRef.current.maxFuel,
       maxFuel: carRef.current.maxFuel,
-      isAirborne: false
+      isAirborne: false,
+      currentLevel: 1,
+      targetMeters: 200,
+      prevTargetMeters: 0,
+      levelProgressPct: 0
     };
 
     setHudData({
@@ -457,6 +503,25 @@ export default function App() {
     }
   }, [gameState, handleGameOver]);
 
+  // Disparo de notificação e som comemorativo ao completar missão diária
+  const triggerMissionCompleted = useCallback((newly: DailyMission[]) => {
+    if (newly && newly.length > 0) {
+      soundManager.playLevelUp();
+      setMissionToast({ title: newly[0].title, rewardCoins: newly[0].rewardCoins });
+      setUnclaimedMissionsCount(countUnclaimedMissions(loadDailyMissions()));
+      setTimeout(() => {
+        setMissionToast((prev) => (prev?.title === newly[0].title ? null : prev));
+      }, 3500);
+    }
+  }, []);
+
+  // Manipulação de Combustível coletado (alimenta missões diárias)
+  const handleFuelCollected = useCallback(() => {
+    fuelCansCollectedRef.current += 1;
+    const newly = recordMissionProgress('COLLECT_FUEL_SINGLE_RUN', fuelCansCollectedRef.current, false);
+    triggerMissionCompleted(newly);
+  }, [triggerMissionCompleted]);
+
   // Manipulação de Moedas coletadas em tempo real (contabiliza imediatamente no saldo e na corrida)
   const handleCoinCollected = useCallback((val: number) => {
     const safeVal = Number.isFinite(val) && val > 0 ? val : 1;
@@ -473,6 +538,20 @@ export default function App() {
     }
 
     setTotalCoins(totalCoinsRef.current);
+    const newly = recordMissionProgress('COLLECT_COINS_CUMULATIVE_DAY', safeVal, true);
+    triggerMissionCompleted(newly);
+  }, [triggerMissionCompleted]);
+
+  // Resgate de recompensas de missões diárias
+  const handleMissionRewardClaimed = useCallback((coins: number) => {
+    totalCoinsRef.current += coins;
+    setTotalCoins(totalCoinsRef.current);
+    try {
+      localStorage.setItem('hillclimb_total_coins', totalCoinsRef.current.toString());
+    } catch {
+      // Ignora erro
+    }
+    setUnclaimedMissionsCount(countUnclaimedMissions(loadDailyMissions()));
   }, []);
 
   // Compra de upgrade na oficina (Individual por veículo!)
@@ -500,7 +579,10 @@ export default function App() {
 
   // Controles
   const setControlState = useCallback((key: keyof KeyControls, state: boolean) => {
-    controlsRef.current[key] = state;
+    if (controlsRef.current[key] !== state) {
+      controlsRef.current[key] = state;
+      setActiveControls((prev) => (prev[key] === state ? prev : { ...prev, [key]: state }));
+    }
     if (gameState === 'PLAYING') {
       if (state) {
         soundManager.startEngine();
@@ -562,6 +644,7 @@ export default function App() {
       controlsRef.current.gas = false;
       controlsRef.current.brake = false;
       controlsRef.current.boost = false;
+      setActiveControls({ gas: false, brake: false, boost: false });
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -597,8 +680,12 @@ export default function App() {
     }
   };
 
-  // Loop Principal do Jogo (60fps no Canvas)
+  // Loop Principal do Jogo (Só ativa quando a tela de corrida estiver ativa: PLAYING, PAUSED ou GAME_OVER)
   useEffect(() => {
+    if (gameState !== 'PLAYING' && gameState !== 'PAUSED' && gameState !== 'GAME_OVER') {
+      return;
+    }
+
     const loop = (now: number) => {
       const currentTime = typeof now === 'number' && Number.isFinite(now) ? now : performance.now();
       if (!Number.isFinite(lastTimeRef.current) || lastTimeRef.current <= 0) {
@@ -627,7 +714,8 @@ export default function App() {
               dt,
               handleCoinCollected,
               handleGameOver,
-              selectedStageId
+              selectedStageId,
+              handleFuelCollected
             );
 
             ensurePickupsAhead(car.x);
@@ -655,6 +743,54 @@ export default function App() {
             const slopeDeg = Number.isFinite(car.angle) ? Math.round(-(car.angle) * (180 / Math.PI)) : 0;
             const isAirborne = !car.rearWheel.onGround && !car.frontWheel.onGround;
 
+            // Sistema de Metas por Nível (Level Checkpoints estilo Hill Climb Racing)
+            const cp = getCheckpointForDistance(dist);
+
+            // Verifica se cruzou a meta de algum nível anterior que ainda não foi comemorado
+            for (const item of LEVEL_CHECKPOINTS) {
+              if (dist >= item.targetMeters && lastCompletedLevelRef.current < item.level) {
+                lastCompletedLevelRef.current = item.level;
+                const newLevel = item.level + 1;
+                const nextTarget = LEVEL_CHECKPOINTS.find((c) => c.level === newLevel)?.targetMeters || (item.targetMeters + 1500);
+                const reward = item.rewardCoins;
+
+                // 1. Bonificação imediata de moedas
+                handleCoinCollected(reward);
+
+                // 2. Som festivo de conquista
+                soundManager.playLevelUp();
+
+                // 3. Efeito visual comemorativo rápido (confetes e partículas douradas no Canvas)
+                const confettiColors = ['#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#8b5cf6', '#e11d48', '#fbbf24'];
+                for (let k = 0; k < 45; k++) {
+                  particlesRef.current.push({
+                    x: car.x + (Math.random() - 0.5) * 220,
+                    y: car.y - 40 - Math.random() * 80,
+                    vx: (Math.random() - 0.5) * 340,
+                    vy: -130 - Math.random() * 190,
+                    size: 4 + Math.random() * 6,
+                    alpha: 1,
+                    color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+                    type: 'coin'
+                  });
+                }
+
+                // 4. Exibe o banner animado no centro com zoom e fade out
+                setLevelCelebration({
+                  completedLevel: item.level,
+                  newLevel,
+                  nextTargetMeters: nextTarget,
+                  rewardCoins: reward
+                });
+
+                setTimeout(() => {
+                  setLevelCelebration(null);
+                }, 2600);
+
+                break;
+              }
+            }
+
             telemetryRef.current.distance = dist;
             telemetryRef.current.speedKmh = speedKmh;
             telemetryRef.current.slopeDeg = slopeDeg;
@@ -663,6 +799,10 @@ export default function App() {
             telemetryRef.current.fuel = car.fuel;
             telemetryRef.current.maxFuel = car.maxFuel;
             telemetryRef.current.isAirborne = isAirborne;
+            telemetryRef.current.currentLevel = cp.level;
+            telemetryRef.current.targetMeters = cp.targetMeters;
+            telemetryRef.current.prevTargetMeters = cp.prevTargetMeters;
+            telemetryRef.current.levelProgressPct = cp.progressPct;
 
             // Detector de marcos de distância alcançada (a cada 1000m)
             const currentKm = Math.floor(dist / 1000);
@@ -672,14 +812,6 @@ export default function App() {
               setBiomeToast(`🏆 RECORDE EM ${stageDef.name.toUpperCase()}: ${currentKm * 1000} METROS!`);
               setTimeout(() => setBiomeToast(null), 4000);
             }
-          } else if (gameState === 'MENU') {
-            // No menu, o carro repousa na linha de largada aguardando o piloto clicar em PILOTAR
-            car.x = 100;
-            car.y = getTerrainY(100) - 75;
-            car.vx = 0;
-            car.vy = 0;
-            car.angle = Math.sin(currentTime * 0.002) * 0.015;
-            ensurePickupsAhead(car.x);
           }
 
           // Renderização do mundo com o cenário selecionado
@@ -694,8 +826,18 @@ export default function App() {
             selectedStageId
           );
 
+          // Rastreamento contínuo de tempo de voo nos saltos (missão diária cumulativa)
+          if (!car.rearWheel.onGround && !car.frontWheel.onGround) {
+            airTimeAccumulatorRef.current += dt;
+            if (airTimeAccumulatorRef.current >= 1.0) {
+              const wholeSec = Math.floor(airTimeAccumulatorRef.current);
+              airTimeAccumulatorRef.current -= wholeSec;
+              const newlyAir = recordMissionProgress('AIR_TIME_CUMULATIVE_DAY', wholeSec, true);
+              triggerMissionCompleted(newlyAir);
+            }
+          }
+
           // Sincronização secundária com o estado do React em baixa frequência (1x por segundo)
-          // Isso evita sobrecarregar o React Fiber Scheduler e o Garbage Collector em WebViews móveis
           hudFrameCountRef.current = (hudFrameCountRef.current + 1) % 60;
           if (hudFrameCountRef.current === 0 && gameState === 'PLAYING') {
             const dist = Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0;
@@ -704,6 +846,21 @@ export default function App() {
             const safeRunCoins = Number.isFinite(runCoinsRef.current) ? Math.max(0, runCoinsRef.current) : 0;
             const safeFuel = Number.isFinite(car.fuel) ? car.fuel : 100;
             const safeMaxFuel = Number.isFinite(car.maxFuel) && car.maxFuel > 0 ? car.maxFuel : 100;
+
+            // Rastreamento contínuo de missões diárias:
+            // 1. Distância única na corrida
+            const newlyDist = recordMissionProgress('DRIVE_DISTANCE_SINGLE_RUN', dist, false);
+            triggerMissionCompleted(newlyDist);
+
+            // 2. Especialista de Terreno: 2.000m jogando especificamente no cenário 2 (Pine Forest)
+            if (selectedStageId === 'stage_2_pine_forest') {
+              const deltaStage2 = Math.max(0, dist - lastStage2DistanceRef.current);
+              if (deltaStage2 > 0) {
+                lastStage2DistanceRef.current = dist;
+                const newlyStage2 = recordMissionProgress('STAGE2_DISTANCE_CUMULATIVE_DAY', deltaStage2, true);
+                triggerMissionCompleted(newlyStage2);
+              }
+            }
 
             setHudData({
               distance: dist,
@@ -728,7 +885,18 @@ export default function App() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [gameState, vehicleUpgrades, selectedVehicleId, selectedStageId, suspension, ensurePickupsAhead, handleCoinCollected, handleGameOver]);
+  }, [
+    gameState,
+    vehicleUpgrades,
+    selectedVehicleId,
+    selectedStageId,
+    suspension,
+    ensurePickupsAhead,
+    handleCoinCollected,
+    handleGameOver,
+    handleFuelCollected,
+    triggerMissionCompleted
+  ]);
 
   // Encerramento de áudio somente ao desmontar a aplicação
   useEffect(() => {
@@ -757,148 +925,175 @@ export default function App() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none bg-[#090d16]">
-      {/* Canvas Principal do Jogo */}
-      <canvas ref={canvasRef} className="block w-full h-full" />
-
-      {/* Tela de Título Inicial */}
+      {/* 1. TELA INICIAL (MENU PRINCIPAL) */}
       {gameState === 'MENU' && (
         <TitleScreen
-          bestDistance={bestDistance}
           totalCoins={totalCoins}
-          upgrades={vehicleUpgrades[selectedVehicleId] || DEFAULT_VEHICLE_UPGRADES.red_speedster}
+          bestDistance={bestDistance}
+          isMuted={isMuted}
+          onStartGame={handleStartGame}
+          onNavigate={(screen) => setGameState(screen)}
+          onToggleMute={toggleMute}
+          onToggleFullScreen={toggleFullScreen}
+        />
+      )}
+
+      {/* 2. TELA DEDICADA DA GARAGEM & OFICINAS */}
+      {gameState === 'GARAGE' && (
+        <GarageScreen
+          vehicleUpgrades={vehicleUpgrades}
+          totalCoins={totalCoins}
           selectedVehicleId={selectedVehicleId}
           unlockedVehicles={unlockedVehicles}
+          suspensionConfig={suspension}
+          onChangeSuspension={(newConfig) => {
+            setSuspension(newConfig);
+            try {
+              localStorage.setItem('hillclimb_suspension_cfg', JSON.stringify(newConfig));
+            } catch {
+              // Ignora erro
+            }
+          }}
+          onSelectVehicle={handleSelectVehicle}
+          onUnlockVehicle={handleUnlockVehicle}
+          onUpgrade={handleUpgrade}
+          onBackToMenu={() => setGameState('MENU')}
+          onStartGame={handleStartGame}
+        />
+      )}
+
+      {/* 3. TELA DEDICADA DE CENÁRIOS & PISTAS */}
+      {gameState === 'STAGES' && (
+        <StagesScreen
+          totalCoins={totalCoins}
           selectedStageId={selectedStageId}
           unlockedStages={unlockedStages}
-          onSelectVehicle={handleSelectVehicle}
           onSelectStage={handleSelectStage}
-          onStartGame={handleStartGame}
-          onOpenGarage={() => setIsGarageOpen(true)}
-          onToggleFullScreen={toggleFullScreen}
+          onUnlockStage={handleUnlockStage}
+          onBackToMenu={() => setGameState('MENU')}
         />
       )}
 
-      {/* HUD Superior de Telemetria e Status */}
-      {gameState !== 'MENU' && (
-        <HUD
-          telemetryRef={telemetryRef}
-          stageId={selectedStageId}
-          isMuted={isMuted}
-          isPaused={gameState === 'PAUSED'}
-          isTuningOpen={isTuningOpen}
-          onToggleMute={toggleMute}
-          onTogglePause={togglePause}
-          onOpenGarage={() => {
-            setGameState('PAUSED');
-            soundManager.stopEngine();
-            setIsGarageOpen(true);
-          }}
-          onToggleTuning={() => setIsTuningOpen((prev) => !prev)}
-          onEndRun={handleEndRun}
-          onToggleFullScreen={toggleFullScreen}
-        />
+      {/* 4. TELA DEDICADA DE CRÉDITOS */}
+      {gameState === 'CREDITS' && (
+        <CreditsScreen onBackToMenu={() => setGameState('MENU')} />
       )}
 
-      {/* Banner de Notificação de Recorde de Distância */}
-      {biomeToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-4 w-full max-w-lg text-center animate-bounce">
-          <div className="bg-slate-900/95 border-2 border-amber-400 backdrop-blur-md px-4 py-2 rounded-2xl shadow-[0_10px_30px_rgba(245,158,11,0.4)] text-amber-300 font-racing font-bold text-xs sm:text-sm tracking-wide">
-            {biomeToast}
-          </div>
-        </div>
+      {/* 5. TELA DE CORRIDA ATIVA (SÓ ATIVADA AO INICIAR) */}
+      {(gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'GAME_OVER') && (
+        <>
+          {/* Canvas Principal da Corrida */}
+          <canvas ref={canvasRef} className="block w-full h-full" />
+
+          {/* Interface Limpa: Apenas Barra de Combustível, Contador de Moedas e Distância */}
+          <HUD
+            telemetryRef={telemetryRef}
+            isPaused={gameState === 'PAUSED'}
+            onTogglePause={togglePause}
+          />
+
+          {/* Pedais na Tela */}
+          <Pedals
+            controls={activeControls}
+            onSetControl={setControlState}
+          />
+
+          {/* Banner de Recorde de Distância */}
+          {biomeToast && (
+            <div className="fixed top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-4 w-full max-w-lg text-center animate-bounce">
+              <div className="bg-slate-900/95 border-2 border-amber-400 backdrop-blur-md px-4 py-2 rounded-2xl shadow-[0_10px_30px_rgba(245,158,11,0.4)] text-amber-300 font-racing font-bold text-xs sm:text-sm tracking-wide">
+                {biomeToast}
+              </div>
+            </div>
+          )}
+
+          {/* Comemoração Festiva Compacta de Passagem de Nível */}
+          {levelCelebration && <LevelCelebration data={levelCelebration} />}
+
+          {/* Modal de Fim de Corrida (Game Over) */}
+          <GameOverModal
+            isOpen={gameState === 'GAME_OVER'}
+            reason={hudData.gameOverReason}
+            distance={hudData.distance}
+            bestDistance={bestDistance}
+            runCoins={hudData.runCoins}
+            totalCoins={totalCoins}
+            onRestart={handleStartGame}
+            onOpenGarage={() => setGameState('GARAGE')}
+            onOpenMissions={() => setIsMissionsOpen(true)}
+            onBackToMenu={() => {
+              setGameState('MENU');
+              soundManager.stopEngine();
+            }}
+          />
+
+          {/* Modal de Pausa Limpo */}
+          {gameState === 'PAUSED' && (
+            <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-40 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 text-center text-white max-w-sm w-full shadow-2xl">
+                <h2 className="font-racing font-extrabold text-2xl text-amber-400 uppercase tracking-wide mb-1">
+                  Corrida Pausada
+                </h2>
+                <p className="text-slate-300 text-xs mb-5">Pressione Continuar ou retorne ao menu.</p>
+                <div className="space-y-2.5">
+                  <button
+                    onClick={togglePause}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-racing font-extrabold text-sm uppercase rounded-xl transition shadow active:scale-95"
+                  >
+                    Continuar Corrida
+                  </button>
+                  <button
+                    onClick={handleStartGame}
+                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-racing font-bold text-xs uppercase rounded-xl transition active:scale-95"
+                  >
+                    Reiniciar Corrida
+                  </button>
+                  <button
+                    onClick={() => {
+                      setGameState('GARAGE');
+                      soundManager.stopEngine();
+                    }}
+                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-racing font-bold text-xs uppercase rounded-xl transition active:scale-95"
+                  >
+                    Ir para Garagem
+                  </button>
+                  <button
+                    onClick={() => {
+                      setGameState('MENU');
+                      soundManager.stopEngine();
+                    }}
+                    className="w-full py-2 text-slate-400 hover:text-white font-racing text-xs transition"
+                  >
+                    Voltar ao Menu Principal
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Pedais na Tela para Mobile e Desktop */}
-      {(gameState === 'PLAYING' || gameState === 'PAUSED') && (
-        <Pedals
-          controls={controlsRef.current}
-          onSetControl={setControlState}
-        />
-      )}
-
-      {/* Painel Retrátil de Oficina da Suspensão */}
-      <SuspensionTuningPanel
-        isOpen={isTuningOpen && gameState !== 'MENU'}
-        config={suspension}
-        onChangeConfig={setSuspension}
-        onBounceTest={handleBounceTest}
-        onResetCar={resetRun}
-        onToggleOpen={() => setIsTuningOpen((prev) => !prev)}
+      {/* Modal de Missões Diárias */}
+      <DailyMissionsModal
+        isOpen={isMissionsOpen}
+        onClose={() => setIsMissionsOpen(false)}
+        onRewardClaimed={handleMissionRewardClaimed}
       />
 
-      {/* Modal de Oficina de Upgrades Individuais, Garagem de Veículos e Cenários */}
-      <GarageModal
-        isOpen={isGarageOpen}
-        vehicleUpgrades={vehicleUpgrades}
-        totalCoins={totalCoins}
-        selectedVehicleId={selectedVehicleId}
-        unlockedVehicles={unlockedVehicles}
-        selectedStageId={selectedStageId}
-        unlockedStages={unlockedStages}
-        onSelectVehicle={handleSelectVehicle}
-        onUnlockVehicle={handleUnlockVehicle}
-        onSelectStage={handleSelectStage}
-        onUnlockStage={handleUnlockStage}
-        onUpgrade={handleUpgrade}
-        onClose={() => {
-          setIsGarageOpen(false);
-          if (gameState === 'PAUSED') {
-            setGameState('PLAYING');
-            soundManager.startEngine();
-          }
-        }}
-      />
-
-      {/* Modal de Fim de Corrida (Game Over) */}
-      <GameOverModal
-        isOpen={gameState === 'GAME_OVER'}
-        reason={hudData.gameOverReason}
-        distance={hudData.distance}
-        bestDistance={bestDistance}
-        runCoins={hudData.runCoins}
-        totalCoins={totalCoins}
-        onRestart={() => {
-          setGameState('PLAYING');
-          resetRun();
-          soundManager.startEngine();
-        }}
-        onOpenGarage={() => setIsGarageOpen(true)}
-      />
-
-      {/* Indicador de Pausa */}
-      {gameState === 'PAUSED' && !isGarageOpen && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 text-center text-white max-w-sm w-full shadow-2xl">
-            <h2 className="font-racing font-bold text-2xl text-amber-400 uppercase mb-2">Corrida Pausada</h2>
-            <p className="text-slate-300 text-xs mb-5">Pressione continuar ou use [Esc] para retornar à pista.</p>
-            <div className="space-y-2">
-              <button
-                onClick={togglePause}
-                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-racing font-bold uppercase rounded-xl transition hover:brightness-110"
-              >
-                Continuar Corrida
-              </button>
-              <button
-                onClick={() => setIsGarageOpen(true)}
-                className="w-full py-2.5 bg-slate-800 text-slate-200 border border-slate-700 font-racing font-bold text-xs uppercase rounded-xl transition hover:bg-slate-700"
-              >
-                Abrir Oficina de Upgrades
-              </button>
-              <button
-                onClick={handleEndRun}
-                className="w-full py-2.5 bg-rose-600/80 hover:bg-rose-600 text-white border border-rose-500/60 font-racing font-bold text-xs uppercase rounded-xl transition"
-              >
-                Encerrar Corrida
-              </button>
-              <button
-                onClick={() => {
-                  setGameState('MENU');
-                  soundManager.stopEngine();
-                }}
-                className="w-full py-2 text-slate-400 hover:text-white text-xs transition"
-              >
-                Voltar ao Menu Principal
-              </button>
+      {/* Toast Flutuante de Notificação de Missão Concluída */}
+      {missionToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-4 select-none animate-bounce">
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-slate-900/95 border-2 border-amber-400 backdrop-blur-md shadow-[0_10px_30px_rgba(245,158,11,0.5)] text-white">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-slate-950 shadow shrink-0">
+              <Target className="w-4 h-4 text-slate-950" />
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] uppercase font-bold text-amber-300 font-racing">
+                🎯 Missão Diária Concluída!
+              </span>
+              <span className="text-xs font-racing font-extrabold text-white">
+                {missionToast.title} <strong className="text-yellow-300 font-bold">(+{missionToast.rewardCoins} 🪙)</strong>
+              </span>
             </div>
           </div>
         </div>

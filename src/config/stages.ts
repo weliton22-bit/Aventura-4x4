@@ -19,7 +19,7 @@ export const STAGES: Record<StageId, StageConfig> = {
     biomeId: 'PINE_FOREST',
     name: 'Floresta Selvagem',
     subtitle: 'Pinheiros & Cordilheiras',
-    price: 150, // 150 moedas conforme pedido
+    price: 400, // 400 moedas conforme balanceamento
     icon: '🌲',
     thumbnail: './assets/aistudio/backgroundColorForest_469a60c0.png',
     description: 'Altos pinheiros pontiagudos e montanhas imponentes. Relevo mais ondulado que exige bom amortecimento e controle.',
@@ -32,7 +32,7 @@ export const STAGES: Record<StageId, StageConfig> = {
     biomeId: 'AUTUMN_VALLEY',
     name: 'Vale do Outono',
     subtitle: 'Colinas Douradas & Folhagem',
-    price: 300, // 300 moedas conforme pedido
+    price: 1200, // 1.200 moedas conforme balanceamento
     icon: '🍂',
     thumbnail: './assets/aistudio/backgroundColorFall_b4df338e.png',
     description: 'Atmosfera acolhedora com árvores douradas e terreno terracota. Rampas mais longas e saltos acrobáticos eletrizantes!',
@@ -45,7 +45,7 @@ export const STAGES: Record<StageId, StageConfig> = {
     biomeId: 'DESERT_PYRAMIDS',
     name: 'Deserto das Pirâmides',
     subtitle: 'Dunas Ancestrais & Monumentos',
-    price: 600, // 600 moedas conforme pedido
+    price: 2500, // 2.500 moedas conforme balanceamento
     icon: '🏜️',
     thumbnail: './assets/aistudio/backgroundColorDesert_0a63e5e3.png',
     description: 'Grandes Pirâmides históricas, templos antigos, cactos gigantes e dunas douradas escaldantes! Desafio épico de pilotagem.',
