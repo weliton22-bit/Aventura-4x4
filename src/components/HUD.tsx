@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Wrench, Settings2, Pause, Play, ChevronUp, ChevronDown, Compass, Flag } from 'lucide-react';
+import { Volume2, VolumeX, Wrench, Settings2, Pause, Play, ChevronUp, ChevronDown, Compass, Flag, Maximize } from 'lucide-react';
 import { CarState, StageId } from '../types/game';
 import { getZoneName } from '../physics/terrain';
 
@@ -19,6 +19,7 @@ interface HUDProps {
   onOpenGarage: () => void;
   onToggleTuning: () => void;
   onEndRun: () => void;
+  onToggleFullScreen?: () => void;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -36,7 +37,8 @@ export const HUD: React.FC<HUDProps> = ({
   onTogglePause,
   onOpenGarage,
   onToggleTuning,
-  onEndRun
+  onEndRun,
+  onToggleFullScreen
 }) => {
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
@@ -155,6 +157,18 @@ export const HUD: React.FC<HUDProps> = ({
         >
           {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
         </button>
+
+        {/* Tela Cheia */}
+        {onToggleFullScreen && (
+          <button
+            onClick={onToggleFullScreen}
+            className="p-1 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-300 hover:text-white transition"
+            title="Alternar Tela Cheia"
+            aria-label="Alternar Tela Cheia"
+          >
+            <Maximize className="w-3.5 h-3.5 text-amber-300" />
+          </button>
+        )}
 
         {/* Pausa */}
         <button

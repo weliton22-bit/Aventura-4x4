@@ -360,8 +360,32 @@ export default function App() {
     }
   }, [totalCoins, unlockedVehicles, vehicleUpgrades, suspension, ensurePickupsAhead]);
 
-  // Iniciar jogo a partir do menu
+  // Alternar tela cheia (oculta barras do navegador no Android e PC)
+  const toggleFullScreen = useCallback(() => {
+    try {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    } catch {
+      // Ignora restrições do navegador
+    }
+  }, []);
+
+  // Iniciar jogo a partir do menu com tela cheia automática
   const handleStartGame = () => {
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch {
+      // Ignora restrições de permissão
+    }
     soundManager.init();
     setGameState('PLAYING');
     resetRun();
@@ -678,6 +702,7 @@ export default function App() {
           onSelectStage={handleSelectStage}
           onStartGame={handleStartGame}
           onOpenGarage={() => setIsGarageOpen(true)}
+          onToggleFullScreen={toggleFullScreen}
         />
       )}
 
@@ -703,6 +728,7 @@ export default function App() {
           }}
           onToggleTuning={() => setIsTuningOpen((prev) => !prev)}
           onEndRun={handleEndRun}
+          onToggleFullScreen={toggleFullScreen}
         />
       )}
 

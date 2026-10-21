@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Wrench, Trophy, Check, Lock, MapPin } from 'lucide-react';
+import { Play, Wrench, Trophy, Check, Lock, MapPin, Maximize } from 'lucide-react';
 import { Upgrades, VehicleId, StageId } from '../types/game';
 import { VEHICLES } from '../config/vehicles';
 import { STAGES } from '../config/stages';
@@ -18,6 +18,7 @@ interface TitleScreenProps {
   onSelectStage: (id: StageId) => void;
   onStartGame: () => void;
   onOpenGarage: () => void;
+  onToggleFullScreen?: () => void;
 }
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
@@ -31,7 +32,8 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   onSelectVehicle,
   onSelectStage,
   onStartGame,
-  onOpenGarage
+  onOpenGarage,
+  onToggleFullScreen
 }) => {
   const currentVehicle = VEHICLES[selectedVehicleId] || VEHICLES.red_speedster;
   const currentStage = STAGES[selectedStageId] || STAGES.stage_1_green_hills;
@@ -58,13 +60,26 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={onOpenGarage}
-          className="bg-slate-900/85 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 rounded-2xl px-3.5 py-1.5 sm:px-4 sm:py-2 flex items-center gap-1.5 text-white font-racing font-bold text-xs uppercase transition shadow-lg active:scale-95"
-        >
-          <Wrench className="w-3.5 h-3.5 text-amber-400" />
-          <span>Garagem & Loja</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onToggleFullScreen && (
+            <button
+              onClick={onToggleFullScreen}
+              className="bg-slate-900/85 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 rounded-2xl px-3 py-1.5 sm:px-3.5 sm:py-2 flex items-center gap-1.5 text-amber-300 font-racing font-bold text-xs uppercase transition shadow-lg active:scale-95"
+              title="Alternar Tela Cheia"
+            >
+              <Maximize className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Tela Cheia</span>
+            </button>
+          )}
+
+          <button
+            onClick={onOpenGarage}
+            className="bg-slate-900/85 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 rounded-2xl px-3.5 py-1.5 sm:px-4 sm:py-2 flex items-center gap-1.5 text-white font-racing font-bold text-xs uppercase transition shadow-lg active:scale-95"
+          >
+            <Wrench className="w-3.5 h-3.5 text-amber-400" />
+            <span>Garagem & Loja</span>
+          </button>
+        </div>
       </div>
 
       {/* Centro: Título & Seletor de Carros e Cenários */}
