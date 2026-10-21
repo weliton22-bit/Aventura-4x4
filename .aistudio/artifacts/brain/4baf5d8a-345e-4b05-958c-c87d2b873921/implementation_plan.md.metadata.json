@@ -1,6 +1,6 @@
 {
-  "summary":  "Remoção da faixa de texto informativa do rodapé no Menu Inicial (Aventura 4x4 • Use os pedais na tela ou as teclas [W/S/D] ou [Setas]). O menu inicial agora exibe a arte de fundo limpa com os botões e saldo de moedas sem obstruções no rodapé.",
-  "updatedAt":  "2026-10-21T18:40:25.135186105Z",
+  "summary":  "Sincronização do contador de distância em tempo real utilizando useRef na física e no painel (HUD). Elimina completamente consultas diretas por ID no DOM (getElementById) e fechamentos estagnados (stale closures) do React na build de produção do GitHub Pages / Cloud Run.",
+  "updatedAt":  "2026-10-21T18:54:39.816806915Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

@@ -221,6 +221,7 @@ export default function App() {
   const lastCompletedLevelRef = useRef<number>(0);
   const runCoinsRef = useRef<number>(0);
   const totalCoinsRef = useRef<number>(totalCoins);
+  const distanceRef = useRef<number>(0);
   const telemetryRef = useRef<TelemetryData>({
     distance: 0,
     speedKmh: 0,
@@ -369,6 +370,7 @@ export default function App() {
     setLevelCelebration(null);
     setBiomeToast(null);
     runCoinsRef.current = 0;
+    distanceRef.current = 0;
     nextPickupIdRef.current = 1;
     ensurePickupsAhead(carRef.current.x);
 
@@ -517,7 +519,10 @@ export default function App() {
     soundManager.stopEngine();
 
     const car = carRef.current;
-    const dist = Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0;
+    const dist = Number.isFinite(distanceRef.current) && distanceRef.current > 0
+      ? distanceRef.current
+      : (Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0);
+    distanceRef.current = dist;
 
     setBestDistance((prev) => Math.max(Number.isFinite(prev) ? prev : 0, dist));
 
@@ -847,6 +852,7 @@ export default function App() {
               }
             }
 
+            distanceRef.current = dist;
             telemetryRef.current.distance = dist;
             telemetryRef.current.speedKmh = speedKmh;
             telemetryRef.current.slopeDeg = slopeDeg;
@@ -1069,6 +1075,7 @@ export default function App() {
             {/* Interface Limpa: Apenas Barra de Combustível, Contador de Moedas e Distância */}
             <HUD
               telemetryRef={telemetryRef}
+              distanceRef={distanceRef}
               isPaused={gameState === 'PAUSED'}
               onTogglePause={togglePause}
               weather={currentWeather}
@@ -1096,7 +1103,7 @@ export default function App() {
             <GameOverModal
               isOpen={gameState === 'GAME_OVER'}
               reason={hudData.gameOverReason}
-              distance={hudData.distance}
+              distance={distanceRef.current > 0 ? distanceRef.current : hudData.distance}
               bestDistance={bestDistance}
               runCoins={hudData.runCoins}
               totalCoins={totalCoins}

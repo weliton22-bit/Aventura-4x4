@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Fuel, Pause, Play, AlertTriangle } from 'lucide-react';
 import { WeatherState } from '../types/weather';
 
@@ -34,6 +34,7 @@ export const DEFAULT_TELEMETRY: TelemetryData = {
 
 interface HUDProps {
   telemetryRef: React.RefObject<TelemetryData>;
+  distanceRef?: React.RefObject<number>;
   isPaused: boolean;
   onTogglePause: () => void;
   weather?: WeatherState | null;
@@ -41,18 +42,41 @@ interface HUDProps {
 
 export const HUD: React.FC<HUDProps> = ({
   telemetryRef,
+  distanceRef,
   isPaused,
   onTogglePause,
   weather
 }) => {
+  const distanceSpanRef = useRef<HTMLSpanElement>(null);
   const [telemetry, setTelemetry] = useState<TelemetryData>(() => telemetryRef.current || DEFAULT_TELEMETRY);
 
+  // Sincronização em alta frequência do contador de distância via useRef:
+  // Evita qualquer consulta direta por ID no DOM (getElementById) e elimina
+  // completamente fechamentos estagnados (stale closures) do React na build de produção
+  useEffect(() => {
+    let animId: number;
+
+    const syncDistance = () => {
+      const rawDist = distanceRef?.current ?? telemetryRef?.current?.distance ?? 0;
+      const safeDist = Number.isFinite(rawDist) ? Math.max(0, Math.floor(rawDist)) : 0;
+
+      if (distanceSpanRef.current) {
+        distanceSpanRef.current.textContent = `${safeDist}m`;
+      }
+      animId = requestAnimationFrame(syncDistance);
+    };
+
+    animId = requestAnimationFrame(syncDistance);
+    return () => cancelAnimationFrame(animId);
+  }, [distanceRef, telemetryRef]);
+
+  // Atualização periódica moderada para métricas secundárias (combustível, moedas da corrida)
   useEffect(() => {
     const timer = setInterval(() => {
       if (telemetryRef.current) {
         setTelemetry({ ...telemetryRef.current });
       }
-    }, 70);
+    }, 80);
 
     return () => clearInterval(timer);
   }, [telemetryRef]);
@@ -62,7 +86,9 @@ export const HUD: React.FC<HUDProps> = ({
   const fuelPct = Math.max(0, Math.min(100, Math.round((safeFuel / safeMaxFuel) * 100)));
   const isWarningFuel = fuelPct <= 25;
 
-  const safeDistance = Number.isFinite(telemetry.distance) ? Math.max(0, Math.floor(telemetry.distance)) : 0;
+  const initialDistance = distanceRef && Number.isFinite(distanceRef.current)
+    ? Math.max(0, Math.floor(distanceRef.current))
+    : (Number.isFinite(telemetry.distance) ? Math.max(0, Math.floor(telemetry.distance)) : 0);
   const safeRunCoins = Number.isFinite(telemetry.runCoins) ? Math.max(0, telemetry.runCoins) : 0;
 
   return (
@@ -80,8 +106,11 @@ export const HUD: React.FC<HUDProps> = ({
         {/* Distância Percorrida */}
         <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl px-3 py-1.5 flex items-center gap-1.5 text-white shadow-lg">
           <span className="text-xs text-slate-400 font-semibold font-racing uppercase">Dist:</span>
-          <span className="font-racing font-bold text-sm sm:text-base text-white tabular-nums">
-            {safeDistance}m
+          <span
+            ref={distanceSpanRef}
+            className="font-racing font-bold text-sm sm:text-base text-white tabular-nums"
+          >
+            {initialDistance}m
           </span>
         </div>
       </div>
