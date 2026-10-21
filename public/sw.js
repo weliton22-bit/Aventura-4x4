@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hillclimb-pro-v1';
+const CACHE_NAME = 'aventura-4x4-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -19,20 +19,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Estratégia Network-First:
+// Tenta sempre buscar da rede primeiro para garantir que novas builds do Vite,
+// novos scripts e o HTML nunca fiquem presos no cache do navegador ou do APK.
+// Se offline, serve a versão salva no cache.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networked = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const cacheCopy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || networked;
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const cacheCopy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+        }
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

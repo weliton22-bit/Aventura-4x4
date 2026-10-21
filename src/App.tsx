@@ -12,7 +12,7 @@ import { soundManager } from './audio/soundManager';
 import { VEHICLES } from './config/vehicles';
 import { STAGES } from './config/stages';
 import { preloadAllVehicleAssets } from './physics/assetLoader';
-import { HUD, updateDirectTelemetry } from './components/HUD';
+import { HUD, TelemetryData } from './components/HUD';
 import { Pedals } from './components/Pedals';
 import { SuspensionTuningPanel } from './components/SuspensionTuningPanel';
 import { GarageModal } from './components/GarageModal';
@@ -182,6 +182,16 @@ export default function App() {
   const lastKmMarkRef = useRef<number>(0);
   const runCoinsRef = useRef<number>(0);
   const totalCoinsRef = useRef<number>(totalCoins);
+  const telemetryRef = useRef<TelemetryData>({
+    distance: 0,
+    speedKmh: 0,
+    slopeDeg: 0,
+    runCoins: 0,
+    totalCoins: totalCoins,
+    fuel: 100,
+    maxFuel: 100,
+    isAirborne: false
+  });
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const nextPickupIdRef = useRef<number>(1);
@@ -235,6 +245,7 @@ export default function App() {
 
   useEffect(() => {
     totalCoinsRef.current = totalCoins;
+    telemetryRef.current.totalCoins = totalCoins;
     try {
       localStorage.setItem('hillclimb_total_coins', totalCoins.toString());
     } catch {
@@ -313,7 +324,7 @@ export default function App() {
     nextPickupIdRef.current = 1;
     ensurePickupsAhead(carRef.current.x);
 
-    updateDirectTelemetry({
+    telemetryRef.current = {
       distance: 0,
       speedKmh: 0,
       slopeDeg: 0,
@@ -321,9 +332,8 @@ export default function App() {
       totalCoins: totalCoinsRef.current,
       fuel: carRef.current.maxFuel,
       maxFuel: carRef.current.maxFuel,
-      stageId: selectedStageId,
       isAirborne: false
-    });
+    };
 
     setHudData({
       distance: 0,
@@ -453,15 +463,8 @@ export default function App() {
     runCoinsRef.current += safeVal;
     totalCoinsRef.current += safeVal;
 
-    // Atualização instantânea a 0ms no DOM (eliminando qualquer dependência do scheduler do React)
-    const coinsEl = document.getElementById('hud-run-coins');
-    if (coinsEl) {
-      coinsEl.textContent = `+${runCoinsRef.current}`;
-    }
-    const garageEl = document.getElementById('hud-garage-coins');
-    if (garageEl) {
-      garageEl.textContent = `Garagem (${totalCoinsRef.current}🪙)`;
-    }
+    telemetryRef.current.runCoins = runCoinsRef.current;
+    telemetryRef.current.totalCoins = totalCoinsRef.current;
 
     try {
       localStorage.setItem('hillclimb_total_coins', totalCoinsRef.current.toString());
@@ -646,26 +649,20 @@ export default function App() {
             );
 
             // =========================================================================
-            // TELEMETRIA DIRETA A 60 FPS (DESACOPLADA DO RECONCILIADOR ASSÍNCRONO DO REACT)
-            // Atualiza os elementos diretamente no DOM a cada frame físico, garantindo que
-            // o contador de metros, inclinação, moedas e combustível rodem a 60 FPS perfeitos
-            // mesmo no APK do PWABuilder e no GitHub Pages!
+            // TELEMETRIA EM TEMPO REAL NO REF (ATUALIZADA A 60 FPS NO LOOP FÍSICO)
             // =========================================================================
             const dist = Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0;
             const slopeDeg = Number.isFinite(car.angle) ? Math.round(-(car.angle) * (180 / Math.PI)) : 0;
             const isAirborne = !car.rearWheel.onGround && !car.frontWheel.onGround;
 
-            updateDirectTelemetry({
-              distance: dist,
-              speedKmh,
-              slopeDeg,
-              runCoins: runCoinsRef.current,
-              totalCoins: totalCoinsRef.current,
-              fuel: car.fuel,
-              maxFuel: car.maxFuel,
-              stageId: selectedStageId,
-              isAirborne
-            });
+            telemetryRef.current.distance = dist;
+            telemetryRef.current.speedKmh = speedKmh;
+            telemetryRef.current.slopeDeg = slopeDeg;
+            telemetryRef.current.runCoins = runCoinsRef.current;
+            telemetryRef.current.totalCoins = totalCoinsRef.current;
+            telemetryRef.current.fuel = car.fuel;
+            telemetryRef.current.maxFuel = car.maxFuel;
+            telemetryRef.current.isAirborne = isAirborne;
 
             // Detector de marcos de distância alcançada (a cada 1000m)
             const currentKm = Math.floor(dist / 1000);
@@ -784,12 +781,7 @@ export default function App() {
       {/* HUD Superior de Telemetria e Status */}
       {gameState !== 'MENU' && (
         <HUD
-          car={carRef.current}
-          distance={hudData.distance}
-          speedKmh={hudData.speedKmh}
-          slopeDeg={hudData.slopeDeg}
-          currentRunCoins={hudData.runCoins}
-          totalCoins={totalCoins}
+          telemetryRef={telemetryRef}
           stageId={selectedStageId}
           isMuted={isMuted}
           isPaused={gameState === 'PAUSED'}

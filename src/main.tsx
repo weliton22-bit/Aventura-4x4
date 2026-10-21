@@ -6,7 +6,12 @@ import './index.css';
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   window.addEventListener('load', () => {
     const swPath = (import.meta.env.BASE_URL || './') + 'sw.js';
-    navigator.serviceWorker.register(swPath).catch(() => {});
+    navigator.serviceWorker
+      .register(swPath)
+      .then((reg) => {
+        reg.update().catch(() => {});
+      })
+      .catch(() => {});
   });
 }
 
