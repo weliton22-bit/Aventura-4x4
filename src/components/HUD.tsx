@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Fuel, Pause, Play, AlertTriangle } from 'lucide-react';
+import { WeatherState } from '../types/weather';
 
 export interface TelemetryData {
   distance: number;
@@ -35,12 +36,14 @@ interface HUDProps {
   telemetryRef: React.RefObject<TelemetryData>;
   isPaused: boolean;
   onTogglePause: () => void;
+  weather?: WeatherState | null;
 }
 
 export const HUD: React.FC<HUDProps> = ({
   telemetryRef,
   isPaused,
-  onTogglePause
+  onTogglePause,
+  weather
 }) => {
   const [telemetry, setTelemetry] = useState<TelemetryData>(() => telemetryRef.current || DEFAULT_TELEMETRY);
 
@@ -114,7 +117,26 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       </div>
 
-      {/* 3. Botão Pausa Discreto (Direita) */}
+      {/* 3. Indicador Dinâmico de Clima (Tempo, Visibilidade e Grip) */}
+      {weather && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-lg pointer-events-auto shrink-0 mr-1.5">
+          <span className="text-sm select-none">{weather.weatherDef.icon}</span>
+          <div className="hidden sm:flex flex-col text-left">
+            <span className="font-racing font-bold text-[10px] text-white leading-tight">
+              {weather.weatherDef.name}
+            </span>
+            <span className="font-mono text-[9px] text-amber-300 font-bold leading-none">
+              {weather.gripMultiplier < 0.98
+                ? `Grip ${Math.round(weather.gripMultiplier * 100)}%`
+                : weather.visibility < 0.95
+                ? `Visib. ${Math.round(weather.visibility * 100)}%`
+                : 'Pista Seca'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Botão Pausa Discreto (Direita) */}
       <div className="pointer-events-auto">
         <button
           onClick={onTogglePause}

@@ -85,11 +85,39 @@
 }
 
 /* ============================================================ */
+/* MENU INICIAL (TELA DE TÍTULO) - PLANO DE FUNDO & BOTÕES     */
+/* ============================================================ */
+.title-screen-container {
+  background-image: url('./assets/menu-bg.jpg');
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-color: #0b0f19;
+}
+
+.title-buttons-panel {
+  background: rgba(11, 15, 25, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.75rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: 1.25rem;
+}
+
+.title-btn-primary,
+.title-btn-secondary {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================ */
 /* REGRAS RESPONSIVAS PARA DISPOSITIVOS NA HORIZONTAL (LANDSCAPE) */
 /* ============================================================ */
 @media (orientation: landscape) and (max-height: 550px) {
   /* PROBLEMA 1: TELA INICIAL COMPACTADA NA HORIZONTAL */
   .title-screen-container {
+    background-position: center bottom !important;
+    background-size: cover !important;
     overflow-y: auto !important;
     max-height: 100dvh !important;
     touch-action: pan-y !important;
@@ -118,6 +146,13 @@
     margin-top: 0 !important;
   }
 
+  .title-buttons-panel {
+    background: rgba(11, 15, 25, 0.58) !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
+  }
+
   /* Grid de 2 colunas para os 4 botões na horizontal */
   .title-screen-buttons-grid {
     display: grid !important;
@@ -125,7 +160,7 @@
     gap: 10px !important;
     width: 100% !important;
     max-width: 520px !important;
-    margin: 0.2rem auto !important;
+    margin: 0.15rem auto !important;
   }
 
   .title-btn-primary {

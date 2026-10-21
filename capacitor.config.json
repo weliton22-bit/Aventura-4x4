@@ -1,6 +1,6 @@
 {
   "appId": "com.hillclimbpro.game",
-  "appName": "Hill Climb Pro",
+  "appName": "Aventura 4x4",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

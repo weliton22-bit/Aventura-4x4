@@ -25,6 +25,8 @@ import { DailyMissionsModal } from './components/DailyMissionsModal';
 import { loadDailyMissions, recordMissionProgress, countUnclaimedMissions } from './utils/missionsManager';
 import { DailyMission } from './types/missions';
 import { Target } from 'lucide-react';
+import { WeatherState } from './types/weather';
+import { createInitialWeather, stepWeather } from './config/weather';
 
 const DEFAULT_VEHICLE_UPGRADES: VehicleUpgrades = {
   red_speedster: { engine: 1, tires: 1, suspension: 1, fuelTank: 1 },
@@ -175,6 +177,10 @@ export default function App() {
   const fuelCansCollectedRef = useRef<number>(0);
   const lastStage2DistanceRef = useRef<number>(0);
   const airTimeAccumulatorRef = useRef<number>(0);
+
+  // Sistema de Clima Dinâmico por Cenário e Bioma
+  const weatherRef = useRef<WeatherState>(createInitialWeather(selectedStageId));
+  const [currentWeather, setCurrentWeather] = useState<WeatherState>(() => weatherRef.current);
 
   // Métricas do HUD (atualizadas em taxa moderada para performance)
   const [hudData, setHudData] = useState({
@@ -391,12 +397,17 @@ export default function App() {
       gameOverReason: ''
     });
 
+    weatherRef.current = createInitialWeather(selectedStageId);
+    setCurrentWeather({ ...weatherRef.current });
+
     soundManager.startEngine();
   }, [vehicleUpgrades, suspension, selectedVehicleId, selectedStageId, ensurePickupsAhead]);
 
   // Troca de Cenário
   const handleSelectStage = useCallback((id: StageId) => {
     setSelectedStageId(id);
+    weatherRef.current = createInitialWeather(id);
+    setCurrentWeather({ ...weatherRef.current });
     const startX = 100;
     const carUpgrades = vehicleUpgrades[selectedVehicleId] || DEFAULT_VEHICLE_UPGRADES.red_speedster;
     carRef.current = createInitialCar(carUpgrades, suspension, selectedVehicleId, startX);
@@ -412,6 +423,8 @@ export default function App() {
       setTotalCoins((prev) => prev - cost);
       setUnlockedStages((prev) => [...prev, id]);
       setSelectedStageId(id);
+      weatherRef.current = createInitialWeather(id);
+      setCurrentWeather({ ...weatherRef.current });
       soundManager.playUpgrade();
       const startX = 100;
       const carUpgrades = vehicleUpgrades[selectedVehicleId] || DEFAULT_VEHICLE_UPGRADES.red_speedster;
@@ -735,6 +748,17 @@ export default function App() {
 
           // Se estiver jogando, executa a física com os upgrades do carro selecionado
           if (gameState === 'PLAYING') {
+            // Atualização contínua do clima dinâmico por bioma
+            weatherRef.current = stepWeather(
+              weatherRef.current,
+              selectedStageId,
+              dt,
+              (newWeatherDef) => {
+                setBiomeToast(`${newWeatherDef.icon} ${newWeatherDef.name.toUpperCase()}: ${newWeatherDef.description}`);
+                setTimeout(() => setBiomeToast(null), 3800);
+              }
+            );
+
             stepPhysics(
               car,
               controlsRef.current,
@@ -746,7 +770,8 @@ export default function App() {
               handleCoinCollected,
               handleGameOver,
               selectedStageId,
-              handleFuelCollected
+              handleFuelCollected,
+              weatherRef.current
             );
 
             ensurePickupsAhead(car.x);
@@ -845,7 +870,7 @@ export default function App() {
             }
           }
 
-          // Renderização do mundo com o cenário selecionado
+          // Renderização do mundo com o cenário selecionado e clima dinâmico
           renderWorld(
             ctx,
             canvas.width,
@@ -854,7 +879,8 @@ export default function App() {
             pickupsRef.current,
             particlesRef.current,
             controlsRef.current.boost,
-            selectedStageId
+            selectedStageId,
+            weatherRef.current
           );
 
           // Rastreamento contínuo de tempo de voo nos saltos (missão diária cumulativa)
@@ -902,6 +928,10 @@ export default function App() {
               maxFuel: safeMaxFuel,
               gameOverReason: ''
             });
+          }
+
+          if (hudFrameCountRef.current % 15 === 0 && gameState === 'PLAYING') {
+            setCurrentWeather({ ...weatherRef.current });
           }
         }
       }
@@ -1041,6 +1071,7 @@ export default function App() {
               telemetryRef={telemetryRef}
               isPaused={gameState === 'PAUSED'}
               onTogglePause={togglePause}
+              weather={currentWeather}
             />
 
             {/* Pedais na Tela */}

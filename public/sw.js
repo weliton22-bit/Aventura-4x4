@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aventura-4x4-v24';
+const CACHE_NAME = 'aventura-4x4-v26';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

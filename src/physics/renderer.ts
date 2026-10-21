@@ -1,7 +1,9 @@
 import { CarState, Particle, Pickup, WheelState, StageId } from '../types/game';
+import { WeatherState } from '../types/weather';
 import { getBiomeForStage, getTerrainY } from './terrain';
 import { VEHICLES } from '../config/vehicles';
 import { getImage } from './assetLoader';
+import { renderWeatherBackground, renderWorldSplashes, renderWeatherOverlay } from './weatherRenderer';
 
 /**
  * Renderizador de Mundo 2D em Canvas HTML5
@@ -44,7 +46,8 @@ export function renderWorld(
   pickups: Pickup[],
   particles: Particle[],
   isBoostActive: boolean,
-  stageId: StageId = 'stage_1_green_hills'
+  stageId: StageId = 'stage_1_green_hills',
+  weather?: WeatherState
 ) {
   // Limpa o canvas
   ctx.clearRect(0, 0, width, height);
@@ -61,10 +64,13 @@ export function renderWorld(
   ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, width, height);
 
-  // 2. Sol Dourado
+  // 2. Sol Dourado (Atenuado dinamicamente com chuva ou névoa)
   const sunImg = getImage('./assets/aistudio/sun_81a02dcd.png');
   const sunX = width * 0.82;
   const sunY = 55;
+  const sunAlpha = weather ? Math.max(0.12, 1.0 - weather.intensity * 0.75) : 1.0;
+  ctx.save();
+  ctx.globalAlpha = sunAlpha;
   if (sunImg) {
     ctx.drawImage(sunImg, sunX - 35, sunY - 35, 70, 70);
   } else {
@@ -73,6 +79,7 @@ export function renderWorld(
     ctx.arc(sunX, sunY, 28, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.restore();
 
   // 3. Nuvens de Paralaxe Flutuantes
   const cloudSprites = [
@@ -154,6 +161,9 @@ export function renderWorld(
     ctx.closePath();
     ctx.fill();
   }
+
+  // 5.1 Efeito de Atmosfera e Iluminação do Clima (Chuva, Bruma ou Tempestade)
+  renderWeatherBackground(ctx, width, height, weather);
 
   // 6. Configuração da Câmera (Segue o carro e antecipa a rampa à frente)
   const camX = car.x - width * 0.28;
@@ -356,10 +366,16 @@ export function renderWorld(
     ctx.restore();
   });
 
+  // 12.1 Respingos de Chuva no Solo (World Space)
+  renderWorldSplashes(ctx, car, weather);
+
   // 13. Desenha o Carro com Sistema de Amortecimento e Sprites Reais
   drawVehicle(ctx, car, isBoostActive);
 
   ctx.restore();
+
+  // 14. Overlays Dinâmicos de Clima em Tela Cheia (Chuva, Lente, Nevoeiro e Areia)
+  renderWeatherOverlay(ctx, width, height, car, weather, stageId);
 }
 
 function drawSpringAndShock(

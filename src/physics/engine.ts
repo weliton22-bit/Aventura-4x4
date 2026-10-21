@@ -1,4 +1,5 @@
 import { CarState, Particle, Pickup, SuspensionConfig, Upgrades, VehicleId, StageId } from '../types/game';
+import { WeatherState } from '../types/weather';
 import { getBiomeForStage, getTerrainInfo, getTerrainY } from './terrain';
 import { soundManager } from '../audio/soundManager';
 import { VEHICLES } from '../config/vehicles';
@@ -94,7 +95,8 @@ export function stepPhysics(
   onCoinCollected: (val: number) => void,
   onGameOver: (reason: string) => void,
   stageId: StageId = 'stage_1_green_hills',
-  onFuelCollected?: () => void
+  onFuelCollected?: () => void,
+  weather?: WeatherState
 ) {
   if (car.isGameOver) return;
 
@@ -129,7 +131,8 @@ export function stepPhysics(
   }
 
   const enginePower = (1320 + safeEngine * 170) * (vDef.engineBonus || 1) * throttleFactor;
-  const tireGrip = (2.7 + safeTires * 0.32) * (vDef.gripBonus || 1);
+  const weatherGrip = weather ? weather.gripMultiplier : 1.0;
+  const tireGrip = (2.7 + safeTires * 0.32) * (vDef.gripBonus || 1) * weatherGrip;
   const suspensionStab = 1 + safeSusp * 0.08;
 
   for (let s = 0; s < subSteps; s++) {
@@ -475,18 +478,28 @@ export function stepPhysics(
     }
   }
 
-    // Partículas de poeira e escapamento (para frente ou marcha ré com tração ativa)
+    // Partículas de poeira, spray de água ou tempestade de areia (para frente ou marcha ré com tração ativa)
     if ((car.rearWheel.onGround || car.frontWheel.onGround) && (controls.gas || controls.boost || controls.brake) && Math.random() < 0.7) {
       const activeWheel = controls.brake ? car.frontWheel : car.rearWheel;
       const kickDir = controls.brake ? 1 : -1;
+
+      let particleColor = '#a8a29e';
+      if (controls.boost) {
+        particleColor = '#38bdf8';
+      } else if (weather?.currentType === 'RAIN') {
+        particleColor = '#7dd3fc'; // Spray translúcido de água
+      } else if (weather?.currentType === 'SANDSTORM') {
+        particleColor = '#f59e0b'; // Poeira e areia fina dourada
+      }
+
       particles.push({
         x: activeWheel.worldX + (controls.brake ? 8 : -8),
         y: activeWheel.worldY + car.wheelRadius - 3,
         vx: -car.vx * 0.3 + kickDir * (40 + Math.random() * 45),
         vy: -18 - Math.random() * 30,
-        size: 5 + Math.random() * 6,
+        size: weather?.currentType === 'RAIN' ? (3 + Math.random() * 4) : (5 + Math.random() * 6),
         alpha: 0.85,
-        color: controls.boost ? '#38bdf8' : '#a8a29e',
+        color: particleColor,
         type: controls.boost ? 'turbo' : 'dust'
       });
     }

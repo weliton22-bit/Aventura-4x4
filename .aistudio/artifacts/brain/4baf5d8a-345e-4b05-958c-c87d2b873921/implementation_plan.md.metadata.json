@@ -1,6 +1,6 @@
 {
-  "summary":  "Plano de implementação para corrigir o congelamento da telemetria (metros, moedas e inclinação) no GitHub Pages e no APK gerado pelo PWABuilder. A solução desacopla o HUD do ciclo de reconciliação lenta do React em WebViews Android, implementa atualização direta de alta performance a 60 FPS e corrige a sincronização do GitHub Pages.",
-  "updatedAt":  "2026-10-21T10:23:35.990318780Z",
+  "summary":  "Remoção da faixa de texto informativa do rodapé no Menu Inicial (Aventura 4x4 • Use os pedais na tela ou as teclas [W/S/D] ou [Setas]). O menu inicial agora exibe a arte de fundo limpa com os botões e saldo de moedas sem obstruções no rodapé.",
+  "updatedAt":  "2026-10-21T18:40:25.135186105Z",
   "requestFeedback":  true,
   "userFacing":  true
 }
