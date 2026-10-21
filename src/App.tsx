@@ -12,7 +12,7 @@ import { soundManager } from './audio/soundManager';
 import { VEHICLES } from './config/vehicles';
 import { STAGES } from './config/stages';
 import { preloadAllVehicleAssets } from './physics/assetLoader';
-import { HUD } from './components/HUD';
+import { HUD, updateDirectTelemetry } from './components/HUD';
 import { Pedals } from './components/Pedals';
 import { SuspensionTuningPanel } from './components/SuspensionTuningPanel';
 import { GarageModal } from './components/GarageModal';
@@ -181,6 +181,7 @@ export default function App() {
   const nextFuelXRef = useRef<number>(540);
   const lastKmMarkRef = useRef<number>(0);
   const runCoinsRef = useRef<number>(0);
+  const totalCoinsRef = useRef<number>(totalCoins);
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const nextPickupIdRef = useRef<number>(1);
@@ -233,6 +234,7 @@ export default function App() {
   }, [vehicleUpgrades]);
 
   useEffect(() => {
+    totalCoinsRef.current = totalCoins;
     try {
       localStorage.setItem('hillclimb_total_coins', totalCoins.toString());
     } catch {
@@ -311,6 +313,18 @@ export default function App() {
     nextPickupIdRef.current = 1;
     ensurePickupsAhead(carRef.current.x);
 
+    updateDirectTelemetry({
+      distance: 0,
+      speedKmh: 0,
+      slopeDeg: 0,
+      runCoins: 0,
+      totalCoins: totalCoinsRef.current,
+      fuel: carRef.current.maxFuel,
+      maxFuel: carRef.current.maxFuel,
+      stageId: selectedStageId,
+      isAirborne: false
+    });
+
     setHudData({
       distance: 0,
       speedKmh: 0,
@@ -322,7 +336,7 @@ export default function App() {
     });
 
     soundManager.startEngine();
-  }, [vehicleUpgrades, suspension, selectedVehicleId, ensurePickupsAhead]);
+  }, [vehicleUpgrades, suspension, selectedVehicleId, selectedStageId, ensurePickupsAhead]);
 
   // Troca de Cenário
   const handleSelectStage = useCallback((id: StageId) => {
@@ -437,11 +451,25 @@ export default function App() {
   const handleCoinCollected = useCallback((val: number) => {
     const safeVal = Number.isFinite(val) && val > 0 ? val : 1;
     runCoinsRef.current += safeVal;
-    setTotalCoins((prev) => (Number.isFinite(prev) ? prev : 0) + safeVal);
-    setHudData((prev) => ({
-      ...prev,
-      runCoins: runCoinsRef.current
-    }));
+    totalCoinsRef.current += safeVal;
+
+    // Atualização instantânea a 0ms no DOM (eliminando qualquer dependência do scheduler do React)
+    const coinsEl = document.getElementById('hud-run-coins');
+    if (coinsEl) {
+      coinsEl.textContent = `+${runCoinsRef.current}`;
+    }
+    const garageEl = document.getElementById('hud-garage-coins');
+    if (garageEl) {
+      garageEl.textContent = `Garagem (${totalCoinsRef.current}🪙)`;
+    }
+
+    try {
+      localStorage.setItem('hillclimb_total_coins', totalCoinsRef.current.toString());
+    } catch {
+      // Ignora erro
+    }
+
+    setTotalCoins(totalCoinsRef.current);
   }, []);
 
   // Compra de upgrade na oficina (Individual por veículo!)
@@ -616,6 +644,37 @@ export default function App() {
               controlsRef.current.boost,
               selectedVehicleId
             );
+
+            // =========================================================================
+            // TELEMETRIA DIRETA A 60 FPS (DESACOPLADA DO RECONCILIADOR ASSÍNCRONO DO REACT)
+            // Atualiza os elementos diretamente no DOM a cada frame físico, garantindo que
+            // o contador de metros, inclinação, moedas e combustível rodem a 60 FPS perfeitos
+            // mesmo no APK do PWABuilder e no GitHub Pages!
+            // =========================================================================
+            const dist = Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0;
+            const slopeDeg = Number.isFinite(car.angle) ? Math.round(-(car.angle) * (180 / Math.PI)) : 0;
+            const isAirborne = !car.rearWheel.onGround && !car.frontWheel.onGround;
+
+            updateDirectTelemetry({
+              distance: dist,
+              speedKmh,
+              slopeDeg,
+              runCoins: runCoinsRef.current,
+              totalCoins: totalCoinsRef.current,
+              fuel: car.fuel,
+              maxFuel: car.maxFuel,
+              stageId: selectedStageId,
+              isAirborne
+            });
+
+            // Detector de marcos de distância alcançada (a cada 1000m)
+            const currentKm = Math.floor(dist / 1000);
+            if (currentKm > 0 && currentKm !== lastKmMarkRef.current) {
+              lastKmMarkRef.current = currentKm;
+              const stageDef = STAGES[selectedStageId] || STAGES.stage_1_green_hills;
+              setBiomeToast(`🏆 RECORDE EM ${stageDef.name.toUpperCase()}: ${currentKm * 1000} METROS!`);
+              setTimeout(() => setBiomeToast(null), 4000);
+            }
           } else if (gameState === 'MENU') {
             // No menu, o carro repousa na linha de largada aguardando o piloto clicar em PILOTAR
             car.x = 100;
@@ -638,8 +697,9 @@ export default function App() {
             selectedStageId
           );
 
-          // Atualização periódica do HUD (a cada 3 frames garantidos ~20fps de atualização contínua)
-          hudFrameCountRef.current = (hudFrameCountRef.current + 1) % 3;
+          // Sincronização secundária com o estado do React em baixa frequência (1x por segundo)
+          // Isso evita sobrecarregar o React Fiber Scheduler e o Garbage Collector em WebViews móveis
+          hudFrameCountRef.current = (hudFrameCountRef.current + 1) % 60;
           if (hudFrameCountRef.current === 0 && gameState === 'PLAYING') {
             const dist = Number.isFinite(car.x) ? Math.max(0, Math.floor((car.x - 100) / 10)) : 0;
             const speedKmh = Number.isFinite(car.vx) && Number.isFinite(car.vy) ? Math.round(Math.hypot(car.vx, car.vy) * 0.18) : 0;
@@ -647,15 +707,6 @@ export default function App() {
             const safeRunCoins = Number.isFinite(runCoinsRef.current) ? Math.max(0, runCoinsRef.current) : 0;
             const safeFuel = Number.isFinite(car.fuel) ? car.fuel : 100;
             const safeMaxFuel = Number.isFinite(car.maxFuel) && car.maxFuel > 0 ? car.maxFuel : 100;
-
-            // Detector de marcos de distância alcançada (a cada 1000m)
-            const currentKm = Math.floor(dist / 1000);
-            if (currentKm > 0 && currentKm !== lastKmMarkRef.current) {
-              lastKmMarkRef.current = currentKm;
-              const stageDef = STAGES[selectedStageId] || STAGES.stage_1_green_hills;
-              setBiomeToast(`🏆 RECORDE EM ${stageDef.name.toUpperCase()}: ${currentKm * 1000} METROS!`);
-              setTimeout(() => setBiomeToast(null), 4000);
-            }
 
             setHudData({
               distance: dist,

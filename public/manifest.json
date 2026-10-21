@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "Hill Climb Pro: Física & Upgrades",
-  "short_name": "HillClimbPro",
+  "name": "Aventura 4x4",
+  "short_name": "Aventura 4x4",
   "description": "Jogo de corrida e física off-road com subidas íngremes, carros customizáveis e efeitos sonoros.",
   "start_url": "./",
   "scope": "./",

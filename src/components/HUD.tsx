@@ -22,6 +22,90 @@ interface HUDProps {
   onToggleFullScreen?: () => void;
 }
 
+export interface TelemetryData {
+  distance: number;
+  speedKmh: number;
+  slopeDeg: number;
+  runCoins: number;
+  totalCoins?: number;
+  fuel: number;
+  maxFuel: number;
+  stageId?: StageId;
+  isAirborne?: boolean;
+}
+
+/**
+ * Atualização imperativa ultrarrápida direta nos elementos do DOM (60 FPS)
+ * Desacoplada do reconciliador assíncrono do React, garantindo que o placar,
+ * metros, moedas e inclinação NUNCA congelem em WebViews de APKs ou no GitHub Pages.
+ */
+export function updateDirectTelemetry(data: TelemetryData) {
+  const distEl = document.getElementById('hud-distance');
+  if (distEl) {
+    const d = Math.max(0, Math.floor(data.distance));
+    distEl.textContent = `${d}m`;
+  }
+
+  const speedEl = document.getElementById('hud-speed');
+  if (speedEl) {
+    speedEl.textContent = `${Math.max(0, Math.round(data.speedKmh))}km/h`;
+  }
+
+  const coinsEl = document.getElementById('hud-run-coins');
+  if (coinsEl) {
+    coinsEl.textContent = `+${Math.max(0, Math.floor(data.runCoins))}`;
+  }
+
+  const slopeEl = document.getElementById('hud-slope');
+  if (slopeEl) {
+    const s = Math.round(data.slopeDeg);
+    slopeEl.textContent = `${s}°`;
+    if (s > 20) {
+      slopeEl.className = 'text-rose-400 font-mono font-bold';
+    } else if (s < -20) {
+      slopeEl.className = 'text-emerald-400 font-mono font-bold';
+    } else {
+      slopeEl.className = 'text-slate-300 font-mono';
+    }
+  }
+
+  const maxF = Math.max(1, data.maxFuel || 100);
+  const f = Math.max(0, Math.min(maxF, data.fuel ?? maxF));
+  const fuelPct = Math.max(0, Math.min(100, Math.round((f / maxF) * 100)));
+  const isLow = fuelPct < 25;
+
+  const fuelTextEl = document.getElementById('hud-fuel-pct');
+  if (fuelTextEl) {
+    fuelTextEl.textContent = `${fuelPct}%`;
+    fuelTextEl.className = isLow ? 'text-rose-400 font-bold animate-pulse' : 'text-emerald-400';
+  }
+
+  const fuelBarEl = document.getElementById('hud-fuel-bar');
+  if (fuelBarEl) {
+    fuelBarEl.style.width = `${fuelPct}%`;
+    fuelBarEl.className = `h-full rounded-full transition-all duration-100 ${
+      isLow ? 'bg-rose-500 animate-pulse' : 'bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400'
+    }`;
+  }
+
+  const zoneEl = document.getElementById('hud-zone');
+  if (zoneEl) {
+    zoneEl.textContent = getZoneName(data.distance, data.stageId);
+  }
+
+  const airEl = document.getElementById('hud-airborne');
+  if (airEl) {
+    airEl.style.display = data.isAirborne ? 'inline-block' : 'none';
+  }
+
+  if (typeof data.totalCoins === 'number') {
+    const totalEl = document.getElementById('hud-garage-coins');
+    if (totalEl) {
+      totalEl.textContent = `Garagem (${Math.max(0, Math.floor(data.totalCoins))}🪙)`;
+    }
+  }
+}
+
 export const HUD: React.FC<HUDProps> = ({
   car,
   distance,
@@ -60,7 +144,7 @@ export const HUD: React.FC<HUDProps> = ({
       <div className="bg-slate-900/85 backdrop-blur-md border border-slate-700/60 rounded-xl px-2.5 py-1.5 text-white shadow-lg pointer-events-auto flex flex-col gap-1 w-[185px] sm:w-[210px] transition-all duration-200">
         {/* Cabeçalho Compacto */}
         <div className="flex items-center justify-between pb-0.5 border-b border-slate-800/80">
-          <span className="text-[10px] font-mono font-semibold text-cyan-300 max-w-[130px] truncate">
+          <span id="hud-zone" className="text-[10px] font-mono font-semibold text-cyan-300 max-w-[130px] truncate">
             {getZoneName(safeDistance, stageId)}
           </span>
           <button
@@ -76,12 +160,12 @@ export const HUD: React.FC<HUDProps> = ({
         {/* Linha Principal de Telemetria: Distância apenas em metros, Velocidade e Moedas */}
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-1.5">
-            <span className="font-racing font-bold text-base text-white tabular-nums">{safeDistance}m</span>
-            <span className="text-[10px] font-mono text-cyan-400">{safeSpeed}km/h</span>
+            <span id="hud-distance" className="font-racing font-bold text-base text-white tabular-nums">{safeDistance}m</span>
+            <span id="hud-speed" className="text-[10px] font-mono text-cyan-400">{safeSpeed}km/h</span>
           </div>
           <div className="flex items-center gap-1 font-racing text-xs text-amber-400 font-bold">
             <span className="text-[9px]">🪙</span>
-            <span>+{safeRunCoins}</span>
+            <span id="hud-run-coins">+{safeRunCoins}</span>
           </div>
         </div>
 
@@ -89,12 +173,13 @@ export const HUD: React.FC<HUDProps> = ({
         <div className="w-full">
           <div className="flex justify-between text-[8px] font-semibold text-slate-400 mb-0.5">
             <span>GASOLINA</span>
-            <span className={isLowFuel ? 'text-rose-400 font-bold animate-pulse' : 'text-emerald-400'}>
+            <span id="hud-fuel-pct" className={isLowFuel ? 'text-rose-400 font-bold animate-pulse' : 'text-emerald-400'}>
               {fuelPct}%
             </span>
           </div>
           <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
             <div
+              id="hud-fuel-bar"
               className={`h-full rounded-full transition-all duration-150 ${
                 isLowFuel ? 'bg-rose-500 animate-pulse' : 'bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400'
               }`}
@@ -108,15 +193,13 @@ export const HUD: React.FC<HUDProps> = ({
           <div className="flex items-center justify-between text-[8px] text-slate-400 pt-0.5">
             <div className="flex items-center gap-1">
               <Compass className="w-2.5 h-2.5 text-slate-500" />
-              <span className={slopeDeg > 20 ? 'text-rose-400' : slopeDeg < -20 ? 'text-emerald-400' : 'text-slate-300'}>
-                {slopeDeg}°
+              <span id="hud-slope" className={safeSlope > 20 ? 'text-rose-400 font-mono font-bold' : safeSlope < -20 ? 'text-emerald-400 font-mono font-bold' : 'text-slate-300 font-mono'}>
+                {safeSlope}°
               </span>
             </div>
-            {isAirborne && (
-              <span className="bg-purple-500/25 text-purple-200 px-1 py-0.2 rounded font-bold uppercase text-[7px]">
-                NO AR!
-              </span>
-            )}
+            <span id="hud-airborne" style={{ display: isAirborne ? 'inline-block' : 'none' }} className="bg-purple-500/25 text-purple-200 px-1 py-0.2 rounded font-bold uppercase text-[7px]">
+              NO AR!
+            </span>
           </div>
         )}
       </div>
@@ -140,7 +223,7 @@ export const HUD: React.FC<HUDProps> = ({
           title="Abrir Garagem e Oficinas"
         >
           <Wrench className="w-3 h-3" />
-          <span>Garagem ({safeTotalCoins}🪙)</span>
+          <span id="hud-garage-coins">Garagem ({safeTotalCoins}🪙)</span>
         </button>
 
         {/* Ajuste de Suspensão */}
